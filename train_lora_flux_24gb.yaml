@@ -1,0 +1,94 @@
+# git clone https://github.com/ostris/ai-toolkit.git
+# cd ai-toolkit
+# git submodule update --init --recursive
+# python3 -m venv venv
+# source venv/bin/activate
+# pip3 install -r requirements.txt
+# pip install peft
+# pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# huggingface-cli login
+
+job: extension
+config:
+  name: medical_imaging_lora
+  process:
+    - type: "sd_trainer"
+      training_folder: "output"
+      device: cuda:0
+      performance_log_every: 100 # More frequent logging for medical validation
+
+      network:
+        type: "lora"
+        linear: 32 # Increased for more capacity
+        linear_alpha: 32
+
+      save:
+        dtype: float16
+        save_every: 100 # More frequent saves
+        max_step_saves_to_keep: 8 # Keep more checkpoints
+
+      datasets:
+        - folder_path: "path/to/xrays"
+          caption_ext: "txt"
+          caption_dropout_rate: 0.02 # Lower dropout for medical accuracy
+          shuffle_tokens: false
+          cache_latents_to_disk: true
+          resolution: [1024] # Compromise between quality and memory
+
+        - folder_path: "path/to/ultrasound"
+          caption_ext: "txt"
+          caption_dropout_rate: 0.02
+          resolution: [1024]
+
+        - folder_path: "path/to/ct_scans"
+          caption_ext: "txt"
+          caption_dropout_rate: 0.02
+          resolution: [1024]
+
+        - folder_path: "path/to/chest_xray"
+          caption_ext: "txt"
+          caption_dropout_rate: 0.02
+          resolution: [1024]
+
+      train:
+        batch_size: 1
+        steps: 4000 # Increased for medical detail
+        gradient_accumulation_steps: 1
+        train_unet: true
+        train_text_encoder: false
+        gradient_checkpointing: true
+        noise_scheduler: "flowmatch"
+        optimizer: "adamw8bit"
+        lr: 5e-5 # Lower learning rate for precision
+        linear_timesteps: true
+
+        ema_config:
+          use_ema: true
+          ema_decay: 0.995 # Higher decay for stability
+
+        dtype: bf16
+
+      model:
+        name_or_path: "black-forest-labs/FLUX.1-dev"
+        is_flux: true
+        quantize: true
+
+      sample:
+        sampler: "flowmatch"
+        sample_every: 100
+        width: 1024
+        height: 1024
+        prompts:
+          - "lateral view x-ray of right radius showing oblique fracture with mild displacement"
+          - "breast ultrasound showing hypoechoic mass with irregular margins, BIRADS 4"
+          - "chest x-ray PA view showing right lower lobe infiltrate with pleural effusion"
+          - "chest CT axial slice showing ground glass opacities in bilateral lower lobes"
+        guidance_scale: 4
+        sample_steps: 25 # Increased for medical detail
+        seed: 42
+        walk_seed: true
+
+meta:
+  name: "medical_imaging_lora"
+  version: "1.0"
