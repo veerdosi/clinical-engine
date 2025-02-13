@@ -124,7 +124,7 @@ class BreastPromptGenerator:
 
 if __name__ == "__main__":
     # Configuration
-    API_KEY = "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"
+    API_KEY = "API_KEY_HERE"
     INPUT_DIR = "Dataset_BUSI_with_GT"
     OUTPUT_DIR = "breast_output_prompt"
     BATCH_SIZE = 10
