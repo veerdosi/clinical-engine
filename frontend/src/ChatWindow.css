@@ -1,0 +1,47 @@
+.chat-window {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .chat-history {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+  }
+  
+  .chat-message {
+    margin-bottom: 1rem;
+  }
+  
+  .chat-message.user {
+    text-align: right;
+  }
+  
+  .chat-message.patient {
+    text-align: left;
+  }
+  
+  .chat-input {
+    display: flex;
+    border-top: 1px solid #ccc;
+  }
+  
+  .chat-input input {
+    flex: 1;
+    padding: 0.5rem;
+    border: none;
+    outline: none;
+  }
+  
+  .chat-input button {
+    padding: 0.5rem 1rem;
+    border: none;
+    background-color: #0d47a1;
+    color: white;
+    cursor: pointer;
+  }
+  
