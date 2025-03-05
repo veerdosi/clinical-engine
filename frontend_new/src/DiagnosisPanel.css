@@ -1,0 +1,152 @@
+.diagnosis-panel {
+    background-color: #f7f9fc;
+    border: 1px solid #dbe1ef;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  }
+  
+  .diagnosis-header {
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  
+  .diagnosis-header h3 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+  }
+  
+  .diagnosis-header p {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+  
+  .diagnosis-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  
+  .input-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #2c3e50;
+  }
+  
+  .input-group input {
+    padding: 0.8rem;
+    border: 1px solid #dbe1ef;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  
+  .input-group input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  }
+  
+  .diagnosis-form button {
+    padding: 0.8rem 1.5rem;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .diagnosis-form button:hover {
+    background-color: #2980b9;
+  }
+  
+  .diagnosis-form button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+  }
+  
+  .diagnosis-result {
+    background-color: #fff;
+    border-radius: 6px;
+    padding: 1.5rem;
+    border-left: 4px solid #e74c3c;
+  }
+  
+  .diagnosis-result.correct {
+    border-left-color: #2ecc71;
+  }
+  
+  .diagnosis-result h4 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #e74c3c;
+    font-size: 1.1rem;
+  }
+  
+  .diagnosis-result.correct h4 {
+    color: #2ecc71;
+  }
+  
+  .diagnosis-details {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #ecf0f1;
+  }
+  
+  .diagnosis-details p {
+    margin: 0.5rem 0;
+  }
+  
+  .feedback {
+    margin-bottom: 1.5rem;
+  }
+  
+  .feedback h5, .evaluation-summary h5 {
+    color: #34495e;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+  }
+  
+  .evaluation-summary ul {
+    padding-left: 1.2rem;
+    margin: 0.5rem 0 1.5rem 0;
+  }
+  
+  .evaluation-summary li {
+    margin-bottom: 0.3rem;
+  }
+  
+  .evaluation-summary .positive {
+    color: #27ae60;
+  }
+  
+  .evaluation-summary .negative {
+    color: #c0392b;
+  }
+  
+  .new-case-btn {
+    background-color: #2c3e50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.8rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.2s;
+  }
+  
+  .new-case-btn:hover {
+    background-color: #1a252f;
+  }

@@ -2,6 +2,10 @@ import os
 import requests
 import replicate
 import openai
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 class MedicalSimConfig:
     def __init__(self,
