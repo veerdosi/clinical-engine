@@ -35,8 +35,8 @@ class CaseManager:
             logger.info("Generating new case...")
             
             # Use provided parameters or choose randomly
-            selected_specialty = specialty or random.choice(self.specialties)
-            selected_difficulty = difficulty or random.choice(self.difficulties)
+            selected_specialty = specialty if specialty and specialty.strip() else random.choice(self.specialties)
+            selected_difficulty = difficulty if difficulty and difficulty.strip() else random.choice(self.difficulties)
             
             params = CaseParameters(selected_specialty, selected_difficulty)
             case_gen = CaseGenerator(self.config)

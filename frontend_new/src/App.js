@@ -1,8 +1,10 @@
+// Modify App.js to include the case selection flow
 import React, { useState, useEffect } from 'react';
 import ChatWindow from './ChatWindow';
 import DiagnosisPanel from './DiagnosisPanel';
 import TestOrderingPanel from './TestOrderingPanel';
 import PhysicalExamPanel from './PhysicalExamPanel';
+import CaseSelectionScreen from './CaseSelectionScreen';
 import './App.css';
 
 function App() {
@@ -11,11 +13,16 @@ function App() {
   const [error, setError] = useState(null);
   const [isDiagnosisSubmitted, setIsDiagnosisSubmitted] = useState(false);
   const [isNewCase, setIsNewCase] = useState(false);
+  const [showCaseSelection, setShowCaseSelection] = useState(true); // Start with case selection
 
-  // Fetch the current active case when the component mounts
+  // We'll keep this to handle case loading on initial visit, but we'll show the selection screen
   useEffect(() => {
-    fetchCurrentCase();
-  }, []);
+    if (!showCaseSelection) {
+      fetchCurrentCase();
+    } else {
+      setLoading(false); // No need to load case initially if we're showing selection screen
+    }
+  }, [showCaseSelection]);
 
   const fetchCurrentCase = async () => {
     setLoading(true);
@@ -32,16 +39,27 @@ function App() {
     } catch (err) {
       console.error('Error fetching case:', err);
       setError('Unable to load patient case. Please try again later.');
+      // If we can't fetch a case, go back to case selection screen
+      setShowCaseSelection(true);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNewCase = async () => {
+  const handleNewCase = async (specialty, difficulty) => {
     setLoading(true);
     try {
+      // Optional parameters for specialty and difficulty if passed
+      const body = {};
+      if (specialty) body.specialty = specialty;
+      if (difficulty) body.difficulty = difficulty;
+      
       const response = await fetch('/api/new-case', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body)
       });
       
       if (!response.ok) {
@@ -56,6 +74,9 @@ function App() {
       // Signal to child components that we have a new case
       setIsNewCase(true);
       
+      // Hide case selection screen when we have a case
+      setShowCaseSelection(false);
+      
       return true;
     } catch (err) {
       console.error('Error generating new case:', err);
@@ -66,6 +87,12 @@ function App() {
     }
   };
 
+  const handleCaseGenerated = (caseData) => {
+    setCaseInfo(caseData);
+    setIsNewCase(true);
+    setShowCaseSelection(false);
+  };
+
   const handleDiagnosisSubmitted = () => {
     setIsDiagnosisSubmitted(true);
   };
@@ -74,6 +101,17 @@ function App() {
     // Reset the new case flag once processed by child components
     setIsNewCase(false);
   };
+
+  const handleReturnToSelection = () => {
+    setShowCaseSelection(true);
+    setIsDiagnosisSubmitted(false);
+    setIsNewCase(false);
+  };
+
+  // Show case selection screen if the flag is true
+  if (showCaseSelection) {
+    return <CaseSelectionScreen onCaseGenerated={handleCaseGenerated} />;
+  }
 
   if (loading && !caseInfo) {
     return (
@@ -91,6 +129,7 @@ function App() {
           <h2>Error</h2>
           <p>{error}</p>
           <button onClick={fetchCurrentCase}>Try Again</button>
+          <button onClick={handleReturnToSelection}>Return to Case Selection</button>
         </div>
       </div>
     );
@@ -115,6 +154,14 @@ function App() {
                 <span className="badge-label">Specialty:</span>
                 <span className="badge-value">{caseInfo.specialty}</span>
               </div>
+              {/* Added a button to return to case selection */}
+              <button 
+                className="new-selection-btn" 
+                onClick={handleReturnToSelection}
+                disabled={loading}
+              >
+                New Case Selection
+              </button>
             </>
           )}
         </div>
@@ -143,6 +190,7 @@ function App() {
             case_info={caseInfo} 
             onNewCase={handleNewCase}
             onDiagnosisSubmitted={handleDiagnosisSubmitted}
+            onReturnToSelection={handleReturnToSelection} // Add this prop
           />
         </div>
       </div>

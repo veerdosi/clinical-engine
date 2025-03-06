@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './DiagnosisPanel.css';
 
-const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted }) => {
+const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnToSelection }) => {
   const [diagnosis, setDiagnosis] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [result, setResult] = useState(null);
@@ -110,9 +110,18 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted }) => {
             </ul>
           </div>
           
-          <button className="new-case-btn" onClick={handleNewCase}>
-            Start New Case
-          </button>
+          <div className="button-group">
+            <button className="new-case-btn" onClick={handleNewCase}>
+              Start New Case
+            </button>
+            
+            {/* Add this button if onReturnToSelection prop is provided */}
+            {onReturnToSelection && (
+              <button className="selection-btn" onClick={onReturnToSelection}>
+                Return to Case Selection
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
