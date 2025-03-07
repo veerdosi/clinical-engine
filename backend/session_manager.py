@@ -15,6 +15,8 @@ class SessionManager:
         self.physical_exams = []
         self.patient_interactions = []
         self.session_start_time = datetime.now()
+        # Initialize verified_exam_procedures
+        self.verified_exam_procedures = []
     
     def reset_session(self, case_id=None):
         """
@@ -28,6 +30,7 @@ class SessionManager:
         self.ordered_imaging = set()
         self.physical_exams = []
         self.patient_interactions = []
+        self.verified_exam_procedures = []  # Reset verified procedures
         self.session_start_time = datetime.now()
         logger.info(f"Session reset for case {case_id}")
     
@@ -121,6 +124,39 @@ class SessionManager:
         logger.info(f"Physical exam performed: {system}")
         return exam
     
+    def add_verified_exam_procedure(self, exam_name, procedure_steps, score=0):
+        """
+        Records a verified physical examination procedure.
+        
+        Args:
+            exam_name (str): Name of the examination
+            procedure_steps (list): Steps of the procedure
+            score (float): Score for the procedure (0-100)
+            
+        Returns:
+            dict: The recorded examination procedure
+        """
+        procedure = {
+            "timestamp": datetime.now().isoformat(),
+            "exam_name": exam_name,
+            "procedure_steps": procedure_steps,
+            "procedure_score": score,
+            "verified": True
+        }
+        
+        self.verified_exam_procedures.append(procedure)
+        logger.info(f"Verified exam procedure recorded: {exam_name}")
+        return procedure
+    
+    def get_verified_exam_procedures(self):
+        """
+        Returns all verified physical examination procedures in this session.
+        
+        Returns:
+            list: List of verified examination procedures
+        """
+        return self.verified_exam_procedures
+    
     def get_session_summary(self):
         """
         Returns a summary of the current session.
@@ -134,7 +170,8 @@ class SessionManager:
             "interaction_count": len(self.patient_interactions),
             "tests_ordered": list(self.ordered_tests),
             "imaging_ordered": list(self.ordered_imaging),
-            "physical_exams_performed": len(self.physical_exams)
+            "physical_exams_performed": len(self.physical_exams),
+            "verified_exam_procedures": len(self.verified_exam_procedures)
         }
     
     def get_ordered_tests(self):

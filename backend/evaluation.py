@@ -315,6 +315,7 @@ class PhysicalExamEvaluator:
     def evaluate_physical_exams(
         self,
         physical_exams: List[Dict[str, Any]],
+        verified_procedures: List[Dict[str, Any]],  # Added parameter for procedure verification
         case_info: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
@@ -322,25 +323,37 @@ class PhysicalExamEvaluator:
         
         Args:
             physical_exams: List of physical examinations performed by the student
+            verified_procedures: List of verified examination procedures
             case_info: Information about the current case
             
         Returns:
             Dict containing evaluation of physical examination skills
         """
-        if not physical_exams:
+        if not physical_exams and not verified_procedures:
             return {
                 "thoroughness_score": 0,
                 "relevance_score": 0,
                 "efficiency_score": 0,
+                "procedural_score": 0,
+                "sequence_score": 0,
                 "overall_exam_score": 0,
                 "strengths": [],
                 "areas_for_improvement": ["No physical examinations were performed."],
+                "missed_key_exams": [],
+                "unnecessary_exams": [],
                 "feedback": "You did not perform any physical examinations. Physical examination is a critical part of clinical assessment."
             }
         
         try:
             # Extract performed exam systems
             performed_systems = [exam.get("system", "") for exam in physical_exams]
+            
+            # Extract verified procedures
+            performed_procedures = [proc.get("exam_name", "") for proc in verified_procedures]
+            procedure_scores = [proc.get("procedure_score", 0) for proc in verified_procedures]
+            
+            # Calculate average procedure score if available
+            avg_procedure_score = sum(procedure_scores) / len(procedure_scores) if procedure_scores else 0
             
             # Determine which exams should have been performed based on case
             expected_systems = self._determine_expected_exams(case_info)
@@ -353,22 +366,34 @@ class PhysicalExamEvaluator:
                     "timestamp": exam.get("timestamp", "Unknown")
                 })
             
+            formatted_procedures = []
+            for proc in verified_procedures:
+                formatted_procedures.append({
+                    "exam_name": proc.get("exam_name", "Unknown"),
+                    "procedure_score": proc.get("procedure_score", 0),
+                    "timestamp": proc.get("timestamp", "Unknown")
+                })
+            
             # Create a prompt for evaluation
             system_prompt = f"""You are a medical education expert evaluating a medical student's physical examination skills.
 
 Case Information:
-- Diagnosis: {case_info.get('diagnosis', 'Unknown')}
+- Diagnosis: {case_info.get('diagnosis', case_info.get('expected_diagnosis', 'Unknown'))}
 - Key symptoms: {json.dumps(case_info.get('symptoms', []))}
 - Expected physical exams: {json.dumps(expected_systems)}
 
 Student's physical examinations:
 {json.dumps(formatted_exams, indent=2)}
 
+Student's verified examination procedures:
+{json.dumps(formatted_procedures, indent=2)}
+
 Evaluate the following aspects:
 1. Thoroughness (Did they perform all necessary examinations?)
 2. Relevance (Were the examinations chosen relevant to the case?)
 3. Efficiency (Did they avoid unnecessary examinations?)
 4. Sequence (Did they perform examinations in a logical order?)
+5. Procedural skill (Did they demonstrate knowledge of proper examination techniques?)
 
 Rate each area on a scale of 1-10.
 Identify specific strengths and areas for improvement.
@@ -379,6 +404,7 @@ Return a JSON object with these fields:
 - relevance_score: int (1-10)
 - efficiency_score: int (1-10)
 - sequence_score: int (1-10)
+- procedural_score: int (1-10) - based on their demonstrated knowledge of procedures
 - overall_exam_score: int (1-10)
 - strengths: array of strings
 - areas_for_improvement: array of strings
@@ -401,10 +427,22 @@ Return a JSON object with these fields:
             # Parse the response
             evaluation = json.loads(response.choices[0].message.content)
             
+            # Include procedure score if we have verified procedures
+            if verified_procedures:
+                if "procedural_score" not in evaluation:
+                    evaluation["procedural_score"] = int(min(10, avg_procedure_score / 10))
+            else:
+                evaluation["procedural_score"] = 0
+                if "areas_for_improvement" not in evaluation:
+                    evaluation["areas_for_improvement"] = []
+                evaluation["areas_for_improvement"].append(
+                    "No properly verified examination procedures were performed. Demonstrating procedural knowledge is important."
+                )
+            
             # Ensure all expected fields are present
             expected_fields = [
                 "thoroughness_score", "relevance_score", "efficiency_score", "sequence_score",
-                "overall_exam_score", "strengths", "areas_for_improvement", 
+                "procedural_score", "overall_exam_score", "strengths", "areas_for_improvement", 
                 "missed_key_exams", "unnecessary_exams", "feedback"
             ]
             
@@ -426,6 +464,7 @@ Return a JSON object with these fields:
                 "relevance_score": 5,
                 "efficiency_score": 5,
                 "sequence_score": 5,
+                "procedural_score": 0 if not verified_procedures else int(min(10, avg_procedure_score / 10)),
                 "overall_exam_score": 5,
                 "strengths": [],
                 "areas_for_improvement": ["Unable to evaluate physical examinations due to a technical error."],
@@ -466,11 +505,35 @@ Return a JSON object with these fields:
             }
             
             # Check each symptom for keywords
-            for symptom in symptoms:
-                symptom_lower = symptom.lower()
+            if isinstance(symptoms, list):
+                for symptom in symptoms:
+                    if isinstance(symptom, str):
+                        symptom_lower = symptom.lower()
+                        for system, keywords in system_keywords.items():
+                            if any(keyword in symptom_lower for keyword in keywords):
+                                symptom_systems.append(system)
+            
+            # Also check presenting complaint
+            if "presenting_complaint" in case_info and isinstance(case_info["presenting_complaint"], str):
+                complaint = case_info["presenting_complaint"].lower()
                 for system, keywords in system_keywords.items():
-                    if any(keyword in symptom_lower for keyword in keywords):
+                    if any(keyword in complaint for keyword in keywords):
                         symptom_systems.append(system)
+        
+        # Also examine based on specialty
+        specialty = case_info.get("specialty", "").lower()
+        if "cardio" in specialty:
+            symptom_systems.append("cardiovascular")
+        elif "neuro" in specialty:
+            symptom_systems.append("neurological")
+        elif "pulmon" in specialty or "respiratory" in specialty:
+            symptom_systems.append("respiratory")
+        elif "gastro" in specialty:
+            symptom_systems.append("gastrointestinal")
+        elif "ortho" in specialty:
+            symptom_systems.append("musculoskeletal")
+        elif "derma" in specialty:
+            symptom_systems.append("skin")
         
         # Add relevant systems to expected exams
         expected_exams = default_exams.copy()
@@ -492,13 +555,16 @@ class DiagnosisEvaluator:
         self.clinical_evaluator = ClinicalDecisionEvaluator(config)
         self.physical_exam_evaluator = PhysicalExamEvaluator(config)
     
+    # Modified evaluate method for DiagnosisEvaluator class in evaluation.py
+
     def evaluate(
         self, 
         student_diagnosis: str,
         ordered_tests: Set[str],
         ordered_imaging: Set[str],
         interactions: List[Dict[str, str]],
-        physical_exams: List[Dict[str, Any]] = None
+        physical_exams: List[Dict[str, Any]] = None,
+        verified_procedures: List[Dict[str, Any]] = None  # Add this parameter
     ) -> Dict[str, Any]:
         """
         Performs a comprehensive evaluation of the student's performance.
@@ -509,6 +575,7 @@ class DiagnosisEvaluator:
             ordered_imaging: Imaging studies ordered by the student
             interactions: List of student-patient interactions
             physical_exams: List of physical examinations performed by the student
+            verified_procedures: List of verified examination procedures
             
         Returns:
             Dict containing comprehensive evaluation results
@@ -525,23 +592,28 @@ class DiagnosisEvaluator:
         # Ensure diagnosis exists in the case
         actual_diagnosis = self.case.get("diagnosis")
         if not actual_diagnosis:
-            logger.warning("Case missing diagnosis for evaluation")
-            # Set a default diagnosis if missing
-            actual_diagnosis = "Unspecified illness"
+            # Try different keys used in the case generation
+            actual_diagnosis = self.case.get("expected_diagnosis")
+            if not actual_diagnosis:
+                actual_diagnosis = self.case.get("expected_correct_diagnosis", "Unspecified illness")
+            # Store it back in the standard field
             self.case["diagnosis"] = actual_diagnosis
         
-        # Use empty list if physical_exams is None
+        # Use empty lists if parameters are None
         if physical_exams is None:
             physical_exams = []
+            
+        if verified_procedures is None:
+            verified_procedures = []
         
         # Get interaction evaluation
         interaction_eval = self.interaction_evaluator.evaluate_interactions(
             interactions, self.case
         )
         
-        # Get physical exam evaluation
+        # Get physical exam evaluation with verified procedures
         physical_eval = self.physical_exam_evaluator.evaluate_physical_exams(
-            physical_exams, self.case
+            physical_exams, verified_procedures, self.case
         )
         
         # Get clinical decision evaluation
@@ -549,11 +621,26 @@ class DiagnosisEvaluator:
             student_diagnosis, ordered_tests, ordered_imaging, physical_exams, self.case
         )
         
+        # Determine correctness based on exact match or close match
+        diagnosis_correct = clinical_eval.get("diagnosis_correct", False)
+        
+        # Add basic exact matching as a fallback
+        if not diagnosis_correct:
+            # Clean and normalize diagnoses for comparison
+            student_diag_clean = student_diagnosis.lower().strip()
+            actual_diag_clean = actual_diagnosis.lower().strip()
+            
+            # Check for exact match or substring match
+            if student_diag_clean == actual_diag_clean or \
+            student_diag_clean in actual_diag_clean or \
+            actual_diag_clean in student_diag_clean:
+                diagnosis_correct = True
+        
         # Combine evaluations
         combined_eval = {
             # Overall correctness from clinical evaluation
-            "correct": clinical_eval.get("diagnosis_correct", False),
-            "actual_diagnosis": clinical_eval.get("actual_diagnosis", "Unknown"),
+            "correct": diagnosis_correct,
+            "actual_diagnosis": actual_diagnosis,
             
             # Detailed scores
             "scores": {
@@ -566,6 +653,7 @@ class DiagnosisEvaluator:
                 "exam_thoroughness": physical_eval.get("thoroughness_score", 0),
                 "exam_relevance": physical_eval.get("relevance_score", 0),
                 "exam_efficiency": physical_eval.get("efficiency_score", 0),
+                "procedural_skill": physical_eval.get("procedural_score", 0),  # Add procedural score
                 
                 # Clinical decision making
                 "diagnosis_accuracy": clinical_eval.get("diagnosis_accuracy_score", 0),

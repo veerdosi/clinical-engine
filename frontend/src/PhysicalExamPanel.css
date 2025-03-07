@@ -1,229 +1,334 @@
 .physical-exam-panel {
-    background-color: #f7f9fc;
-    border: 1px solid #dbe1ef;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin: 1rem 0;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    max-height: 600px;
-    overflow-y: auto;
-  }
-  
-  .panel-header {
-    margin-bottom: 1.5rem;
-    text-align: center;
-  }
-  
-  .panel-header h3 {
-    color: #2c3e50;
-    margin-bottom: 0.5rem;
-    font-size: 1.3rem;
-  }
-  
-  .vital-signs-display {
-    background-color: #ebf8ff;
-    border: 1px solid #bee3f8;
-    border-radius: 6px;
+  background-color: #f7f9fc;
+  border: 1px solid #dbe1ef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  max-height: 700px;
+  overflow-y: auto;
+}
+
+.panel-header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.panel-header h3 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  font-size: 1.3rem;
+}
+
+.panel-header p {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.vital-signs-display {
+  background-color: #ebf8ff;
+  border: 1px solid #bee3f8;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.vital-signs-display h4 {
+  color: #2b6cb0;
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+  font-size: 1rem;
+  border-bottom: 1px solid #bee3f8;
+  padding-bottom: 0.5rem;
+}
+
+.vital-signs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.8rem;
+}
+
+.vital-sign-item {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background-color: #fff;
+  border: 1px solid #bee3f8;
+}
+
+.vital-label {
+  font-size: 0.8rem;
+  color: #718096;
+  margin-bottom: 0.2rem;
+  font-weight: 600;
+}
+
+.vital-value {
+  font-size: 1rem;
+  color: #2c5282;
+  font-weight: 500;
+}
+
+.exam-procedure-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-group label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #2c3e50;
+}
+
+.input-group input,
+.input-group textarea {
+  padding: 0.8rem;
+  border: 1px solid #dbe1ef;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: white;
+  width: 100%;
+  font-family: inherit;
+}
+
+.input-group textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.input-group input:focus,
+.input-group textarea:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.input-group input:disabled,
+.input-group textarea:disabled {
+  background-color: #f1f1f1;
+  cursor: not-allowed;
+}
+
+.procedure-steps-list {
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 1.2rem;
+}
+
+.procedure-steps-list h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #2d3748;
+  font-size: 1rem;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: 0.5rem;
+}
+
+.procedure-steps-list ol {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.procedure-steps-list li {
+  padding: 0.5rem 0;
+  position: relative;
+  padding-right: 30px;
+  line-height: 1.5;
+}
+
+.remove-step-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #e53e3e;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 50%;
+}
+
+.remove-step-btn:hover {
+  background-color: #fed7d7;
+}
+
+.step-input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.step-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.add-step-btn,
+.check-procedure-btn,
+.new-exam-btn {
+  padding: 0.8rem 1.2rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.add-step-btn {
+  background-color: #4299e1;
+  color: white;
+}
+
+.add-step-btn:hover:not(:disabled) {
+  background-color: #3182ce;
+}
+
+.check-procedure-btn {
+  background-color: #48bb78;
+  color: white;
+  flex-grow: 1;
+}
+
+.check-procedure-btn:hover:not(:disabled) {
+  background-color: #38a169;
+}
+
+.new-exam-btn {
+  background-color: #ed8936;
+  color: white;
+}
+
+.new-exam-btn:hover:not(:disabled) {
+  background-color: #dd6b20;
+}
+
+.add-step-btn:disabled,
+.check-procedure-btn:disabled,
+.new-exam-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.feedback-message {
+  padding: 1rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.feedback-message.success {
+  background-color: #f0fff4;
+  border: 1px solid #c6f6d5;
+  color: #276749;
+}
+
+.feedback-message.error {
+  background-color: #fff5f5;
+  border: 1px solid #fed7d7;
+  color: #c53030;
+}
+
+.error-message {
+  background-color: #fdf2f2;
+  border: 1px solid #fad7d7;
+  border-radius: 6px;
+  padding: 0.8rem;
+}
+
+.error-message p {
+  color: #e53e3e;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.exam-results {
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 1.5rem;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: 0.5rem;
+}
+
+.result-header h4 {
+  color: #2d3748;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.exam-content {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.exam-content p {
+  margin: 0.5rem 0;
+}
+
+.exam-content strong {
+  color: #4a5568;
+}
+
+.exam-interpretation {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.exam-interpretation h5 {
+  color: #4a5568;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.exam-interpretation p {
+  color: #4a5568;
+  font-style: italic;
+}
+
+/* For responsive design */
+@media (max-width: 768px) {
+  .physical-exam-panel {
     padding: 1rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  .vital-signs-display h4 {
-    color: #2b6cb0;
-    margin-top: 0;
-    margin-bottom: 0.8rem;
-    font-size: 1rem;
-    border-bottom: 1px solid #bee3f8;
-    padding-bottom: 0.5rem;
   }
   
   .vital-signs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 0.8rem;
+    grid-template-columns: 1fr 1fr;
   }
   
-  .vital-sign-item {
-    display: flex;
+  .step-buttons {
     flex-direction: column;
-    padding: 0.5rem;
-    border-radius: 4px;
-    background-color: #fff;
-    border: 1px solid #bee3f8;
   }
   
-  .vital-label {
-    font-size: 0.8rem;
-    color: #718096;
-    margin-bottom: 0.2rem;
-    font-weight: 600;
-  }
-  
-  .vital-value {
-    font-size: 1rem;
-    color: #2c5282;
-    font-weight: 500;
-  }
-  
-  .exam-selection {
-    display: flex;
+  .result-header {
     flex-direction: column;
-    margin-bottom: 1.5rem;
+    gap: 1rem;
+    align-items: flex-start;
   }
-  
-  .exam-selection label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #2c3e50;
-    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  .vital-signs-grid {
+    grid-template-columns: 1fr;
   }
-  
-  .exam-selection select {
-    padding: 0.8rem;
-    border: 1px solid #dbe1ef;
-    border-radius: 4px;
-    font-size: 1rem;
-    margin-bottom: 1rem;
-    background-color: white;
-  }
-  
-  .exam-selection select:focus {
-    outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-  }
-  
-  .exam-selection select:disabled {
-    background-color: #f1f1f1;
-    cursor: not-allowed;
-  }
-  
-  .custom-exam-input {
-    margin-bottom: 1rem;
-  }
-  
-  .custom-exam-input input {
-    width: 100%;
-    padding: 0.8rem;
-    border: 1px solid #dbe1ef;
-    border-radius: 4px;
-    font-size: 1rem;
-    background-color: white;
-  }
-  
-  .custom-exam-input input:focus {
-    outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-  }
-  
-  .custom-exam-examples {
-    margin-top: 0.5rem;
-    font-size: 0.8rem;
-    color: #718096;
-    font-style: italic;
-  }
-  
-  .custom-exam-examples p {
-    margin: 0;
-  }
-  
-  .perform-exam-btn {
-    padding: 0.8rem 1.5rem;
-    background-color: #4299e1;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  
-  .perform-exam-btn:hover:not(:disabled) {
-    background-color: #3182ce;
-  }
-  
-  .perform-exam-btn:disabled {
-    background-color: #cbd5e0;
-    cursor: not-allowed;
-  }
-  
-  .error-message {
-    background-color: #fdf2f2;
-    border: 1px solid #fad7d7;
-    border-radius: 6px;
-    padding: 0.8rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  .error-message p {
-    color: #e53e3e;
-    margin: 0;
-    font-size: 0.9rem;
-  }
-  
-  .exam-results {
-    background-color: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 1.5rem;
-    margin-top: 1.5rem;
-  }
-  
-  .exam-results h4 {
-    color: #2d3748;
-    margin-top: 0;
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
-    border-bottom: 1px solid #edf2f7;
-    padding-bottom: 0.5rem;
-  }
-  
-  .exam-content {
-    font-size: 0.95rem;
-    line-height: 1.6;
-  }
-  
-  .exam-content p {
-    margin: 0.5rem 0;
-  }
-  
-  .exam-content strong {
-    color: #4a5568;
-  }
-  
-  .exam-interpretation {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px dashed #e2e8f0;
-  }
-  
-  .exam-interpretation h5 {
-    color: #4a5568;
-    margin-top: 0;
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
-    font-weight: 600;
-  }
-  
-  .exam-interpretation p {
-    color: #4a5568;
-    font-style: italic;
-  }
-  
-  /* For responsive design */
-  @media (max-width: 600px) {
-    .physical-exam-panel {
-      padding: 1rem;
-    }
-    
-    .vital-signs-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .exam-selection select,
-    .custom-exam-input input {
-      font-size: 0.9rem;
-      padding: 0.7rem;
-    }
-  }
+}

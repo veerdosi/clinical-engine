@@ -61,7 +61,6 @@ class APIRoutes:
                 logger.error(f"Error creating new case: {str(e)}")
                 return jsonify({"error": str(e)}), 500
         
-        # Submit diagnosis endpoint
         @blueprint.route('/submit-diagnosis', methods=['POST'])
         def evaluate_diagnosis():
             try:
@@ -82,13 +81,21 @@ class APIRoutes:
                 if not evaluator:
                     return jsonify({"error": "No active case for evaluation"}), 400
                 
-                # Evaluate the diagnosis with physical exams included
+                # Get verified procedures from session manager with fallback
+                try:
+                    verified_procedures = self.session_manager.get_verified_exam_procedures()
+                except AttributeError:
+                    logger.warning("Session manager missing get_verified_exam_procedures method. Using empty list.")
+                    verified_procedures = []
+                
+                # Evaluate the diagnosis with physical exams and verified procedures included
                 evaluation_result = evaluator.evaluate(
                     student_diagnosis,
                     self.session_manager.get_ordered_tests(),
                     self.session_manager.get_ordered_imaging(),
                     self.session_manager.get_patient_interactions(),
-                    self.session_manager.get_physical_exams()  # Include physical exams
+                    self.session_manager.get_physical_exams(),
+                    verified_procedures
                 )
                 
                 return jsonify(evaluation_result)
@@ -197,16 +204,23 @@ class APIRoutes:
                     return jsonify({"error": "No body system specified"}), 400
                     
                 system = data.get('system', '').strip()
+                procedure_verified = data.get('procedure_verified', False)
+                
                 if not system:
                     return jsonify({"error": "Body system cannot be empty"}), 400
                 
                 # Perform examination if physical exam system available
                 if self.physical_exam_system:
                     current_case = self.case_manager.get_current_case()
-                    exam_results = self.physical_exam_system.perform_examination(current_case, system)
+                    exam_results = self.physical_exam_system.perform_examination(
+                        current_case, 
+                        system,
+                        procedure_verified
+                    )
                     
-                    # Track the examination in the session manager
-                    self.session_manager.add_physical_exam(system, exam_results.get("findings", {}))
+                    # Only track verified examinations or vital signs in the session manager
+                    if procedure_verified or system.lower() == 'vital_signs':
+                        self.session_manager.add_physical_exam(system, exam_results.get("findings", {}))
                     
                     return jsonify(exam_results)
                 else:
@@ -219,6 +233,47 @@ class APIRoutes:
                 logger.error(f"Error performing physical examination: {str(e)}")
                 return jsonify({"error": str(e)}), 500
         
+        @blueprint.route('/verify-physical-exam', methods=['POST'])
+        def verify_physical_exam():
+            try:
+                data = request.get_json()
+                if not data or 'exam_name' not in data or 'steps' not in data:
+                    return jsonify({"error": "Missing exam name or steps"}), 400
+                    
+                exam_name = data.get('exam_name', '').strip()
+                procedure_steps = data.get('steps', [])
+                
+                if not exam_name:
+                    return jsonify({"error": "Exam name cannot be empty"}), 400
+                
+                if not procedure_steps or not isinstance(procedure_steps, list):
+                    return jsonify({"error": "Procedure steps must be a non-empty list"}), 400
+                
+                # Verify the procedure steps using the physical exam system
+                current_case = self.case_manager.get_current_case()
+                if not current_case:
+                    return jsonify({"error": "No active case"}), 404
+                    
+                verification_result = self.physical_exam_system.verify_procedure(
+                    current_case, 
+                    exam_name, 
+                    procedure_steps
+                )
+                
+                # If procedure is correct, track it in the session manager
+                if verification_result.get("is_correct", False):
+                    # Use add_verified_exam_procedure from the session manager
+                    self.session_manager.add_verified_exam_procedure(
+                        exam_name, 
+                        procedure_steps, 
+                        verification_result.get("score", 0)
+                    )
+                
+                return jsonify(verification_result)
+            except Exception as e:
+                logger.error(f"Error verifying physical examination procedure: {str(e)}")
+                return jsonify({"error": str(e)}), 500
+
         # Get lab history endpoint
         @blueprint.route('/lab-history', methods=['GET'])
         def get_lab_history():

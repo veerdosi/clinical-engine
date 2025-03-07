@@ -46,10 +46,9 @@ def create_app():
         
         # Create case manager and generate initial case
         case_manager = CaseManager(config)
-        initial_case = case_manager.generate_new_case()
         
         # Create session manager
-        session_manager = SessionManager(initial_case.get("id"))
+        session_manager = SessionManager()
         
         # Create chat handler
         chat_handler = ChatHandler(case_manager, session_manager, speech_processor)
