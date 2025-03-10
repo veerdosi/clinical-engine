@@ -25,6 +25,7 @@
   gap: 1rem;
   flex-wrap: wrap;
   justify-content: center;
+  margin-bottom: 1rem;
 }
 
 .patient-badge,
@@ -48,6 +49,66 @@
   font-weight: 600;
 }
 
+/* Tab Navigation Styling */
+.tab-navigation {
+  display: flex;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  justify-content: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+.tab-button {
+  background-color: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.8rem 1.2rem;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  color: white;
+}
+
+.tab-button.active {
+  color: white;
+}
+
+.tab-button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -0.5rem;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #3498db;
+  border-radius: 3px 3px 0 0;
+}
+
+/* Tab Content Styling */
+.tab-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: #f5f7fa;
+}
+
+.patient-tab,
+.labs-tab,
+.imaging-tab,
+.procedures-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .content-container {
   display: flex;
   flex: 1;
@@ -56,6 +117,49 @@
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;
+}
+
+.tab-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+  text-align: left;
+}
+
+.tab-container h2 {
+  color: #2c3e50;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.8rem;
+}
+
+.tab-description {
+  color: #7f8c8d;
+  font-size: 1rem;
+  margin-bottom: 2rem;
+}
+
+.procedures-info {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.procedures-info p {
+  color: #4a5568;
+  margin-bottom: 1rem;
+}
+
+.procedures-info ul {
+  margin-bottom: 2rem;
+  padding-left: 1.5rem;
+}
+
+.procedures-info li {
+  margin-bottom: 0.5rem;
+  color: #4a5568;
 }
 
 .main-content {
@@ -148,6 +252,27 @@
   margin: 1rem 0;
 }
 
+.new-selection-btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.8rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.new-selection-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.new-selection-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Responsive design */
 @media (max-width: 1024px) {
   .content-container {
@@ -165,27 +290,44 @@
     flex-direction: column;
     gap: 1rem;
   }
-
   
-.new-selection-btn {
-  background-color: #2c3e50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 0.4rem 0.8rem;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  margin-left: 1rem;
-  transition: background-color 0.2s;
+  .tab-navigation {
+    flex-wrap: wrap;
+  }
+  
+  .tab-button {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+  }
 }
 
-.new-selection-btn:hover:not(:disabled) {
-  background-color: #1a252f;
-}
-
-.new-selection-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+@media (max-width: 600px) {
+  .case-info {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .patient-badge,
+  .case-badge,
+  .specialty-badge {
+    justify-content: center;
+  }
+  
+  .tab-navigation {
+    justify-content: space-between;
+  }
+  
+  .tab-button {
+    flex: 1;
+    padding: 0.5rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .tab-container {
+    padding: 1rem;
+  }
 }

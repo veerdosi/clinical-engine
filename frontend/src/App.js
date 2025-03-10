@@ -1,4 +1,4 @@
-// Modify App.js to include the case selection flow
+// Modified App.js with tabbed navigation
 import React, { useState, useEffect } from 'react';
 import ChatWindow from './ChatWindow';
 import DiagnosisPanel from './DiagnosisPanel';
@@ -14,6 +14,7 @@ function App() {
   const [isDiagnosisSubmitted, setIsDiagnosisSubmitted] = useState(false);
   const [isNewCase, setIsNewCase] = useState(false);
   const [showCaseSelection, setShowCaseSelection] = useState(true); // Start with case selection
+  const [activeTab, setActiveTab] = useState('patient'); // Default to patient tab
 
   // We'll keep this to handle case loading on initial visit, but we'll show the selection screen
   useEffect(() => {
@@ -77,6 +78,9 @@ function App() {
       // Hide case selection screen when we have a case
       setShowCaseSelection(false);
       
+      // Reset to the patient tab
+      setActiveTab('patient');
+      
       return true;
     } catch (err) {
       console.error('Error generating new case:', err);
@@ -91,6 +95,7 @@ function App() {
     setCaseInfo(caseData);
     setIsNewCase(true);
     setShowCaseSelection(false);
+    setActiveTab('patient'); // Reset to the patient tab
   };
 
   const handleDiagnosisSubmitted = () => {
@@ -165,34 +170,107 @@ function App() {
             </>
           )}
         </div>
+        
+        {/* Tab Navigation */}
+        <div className="tab-navigation">
+          <button 
+            className={`tab-button ${activeTab === 'patient' ? 'active' : ''}`}
+            onClick={() => setActiveTab('patient')}
+          >
+            Patient Interaction
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'labs' ? 'active' : ''}`}
+            onClick={() => setActiveTab('labs')}
+          >
+            Laboratory Tests
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'imaging' ? 'active' : ''}`}
+            onClick={() => setActiveTab('imaging')}
+          >
+            Imaging Studies
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'procedures' ? 'active' : ''}`}
+            onClick={() => setActiveTab('procedures')}
+          >
+            Procedures
+          </button>
+        </div>
       </header>
       
-      <div className="content-container">
-        <div className="main-content">
-          <div className="chat-container">
-            <ChatWindow 
-              isDiagnosisSubmitted={isDiagnosisSubmitted}
-              isNewCase={isNewCase}
-              onNewCaseStart={handleNewCaseStarted}
-            />
+      <div className="tab-content">
+        {activeTab === 'patient' && (
+          <div className="patient-tab">
+            <div className="content-container">
+              <div className="main-content">
+                <div className="chat-container">
+                  <ChatWindow 
+                    isDiagnosisSubmitted={isDiagnosisSubmitted}
+                    isNewCase={isNewCase}
+                    onNewCaseStart={handleNewCaseStarted}
+                  />
+                </div>
+              </div>
+              
+              <div className="sidebar-content">
+                <PhysicalExamPanel 
+                  isDisabled={isDiagnosisSubmitted}
+                  caseInfo={caseInfo}
+                />
+                
+                <DiagnosisPanel 
+                  case_info={caseInfo} 
+                  onNewCase={handleNewCase}
+                  onDiagnosisSubmitted={handleDiagnosisSubmitted}
+                  onReturnToSelection={handleReturnToSelection}
+                />
+              </div>
+            </div>
           </div>
-        </div>
+        )}
         
-        <div className="sidebar-content">
-          <PhysicalExamPanel 
-            isDisabled={isDiagnosisSubmitted}
-            caseInfo={caseInfo}
-          />
-          
-          <TestOrderingPanel isDisabled={isDiagnosisSubmitted} />
-          
-          <DiagnosisPanel 
-            case_info={caseInfo} 
-            onNewCase={handleNewCase}
-            onDiagnosisSubmitted={handleDiagnosisSubmitted}
-            onReturnToSelection={handleReturnToSelection} // Add this prop
-          />
-        </div>
+        {activeTab === 'labs' && (
+          <div className="labs-tab">
+            <div className="tab-container">
+              <h2>Laboratory Testing</h2>
+              <p className="tab-description">Order laboratory tests and review results to aid in your diagnosis.</p>
+              <TestOrderingPanel 
+                isDisabled={isDiagnosisSubmitted}
+                forceTabType="lab" 
+              />
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'imaging' && (
+          <div className="imaging-tab">
+            <div className="tab-container">
+              <h2>Imaging Studies</h2>
+              <p className="tab-description">Order imaging studies and review radiologic findings to support your diagnostic workup.</p>
+              <TestOrderingPanel 
+                isDisabled={isDiagnosisSubmitted}
+                forceTabType="imaging" 
+              />
+            </div>
+          </div>
+        )}
+        
+        {activeTab === 'procedures' && (
+          <div className="procedures-tab">
+            <div className="tab-container">
+              <h2>Investigative Procedures</h2>
+              <p className="tab-description">Order specialized procedures to gather additional diagnostic information.</p>
+              <div className="procedures-info">
+                <TestOrderingPanel 
+                  isDisabled={isDiagnosisSubmitted}
+                  forceTabType="procedure" 
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

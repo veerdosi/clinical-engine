@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './TestOrderingPanel.css';
 
-const TestOrderingPanel = ({ isDisabled }) => {
+const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
   const [selectedTab, setSelectedTab] = useState('lab');
   const [isOrdering, setIsOrdering] = useState(false);
   const [selectedTest, setSelectedTest] = useState('');
@@ -9,6 +9,19 @@ const TestOrderingPanel = ({ isDisabled }) => {
   const [testResults, setTestResults] = useState(null);
   const [error, setError] = useState(null);
   const [showCustomInput, setShowCustomInput] = useState(false);
+
+  // Effect to set the tab based on forceTabType prop
+  useEffect(() => {
+    if (forceTabType && ['lab', 'imaging', 'procedure'].includes(forceTabType)) {
+      setSelectedTab(forceTabType);
+      // Reset state when tab is forced to change
+      setSelectedTest('');
+      setCustomTest('');
+      setShowCustomInput(false);
+      setTestResults(null);
+      setError(null);
+    }
+  }, [forceTabType]);
 
   // Common lab test options
   const labTestOptions = [
@@ -45,8 +58,36 @@ const TestOrderingPanel = ({ isDisabled }) => {
     { value: 'custom', label: 'Order Custom Imaging/Procedure...' }
   ];
 
-  // Current options based on selected tab
-  const currentOptions = selectedTab === 'lab' ? labTestOptions : imagingOptions;
+  // Procedure options
+  const procedureOptions = [
+    { value: 'ECG', label: 'Standard 12-Lead ECG' },
+    { value: 'Exercise Stress Test', label: 'Exercise Stress Test' },
+    { value: 'Echocardiogram', label: 'Echocardiogram' },
+    { value: 'Pulmonary Function Test', label: 'Pulmonary Function Test (PFT)' },
+    { value: 'Upper Endoscopy', label: 'Upper Endoscopy (EGD)' },
+    { value: 'Colonoscopy', label: 'Colonoscopy' },
+    { value: 'Bronchoscopy', label: 'Bronchoscopy' },
+    { value: 'Lumbar Puncture', label: 'Lumbar Puncture' },
+    { value: 'Paracentesis', label: 'Paracentesis' },
+    { value: 'Thoracentesis', label: 'Thoracentesis' },
+    { value: 'custom', label: 'Order Custom Procedure...' }
+  ];
+
+  // Get current options based on selected tab
+  const getOptions = () => {
+    switch (selectedTab) {
+      case 'lab':
+        return labTestOptions;
+      case 'imaging':
+        return imagingOptions;
+      case 'procedure':
+        return procedureOptions;
+      default:
+        return labTestOptions;
+    }
+  };
+
+  const currentOptions = getOptions();
 
   const handleTestSelection = (e) => {
     const value = e.target.value;
@@ -73,10 +114,20 @@ const TestOrderingPanel = ({ isDisabled }) => {
     setError(null);
     
     try {
-      const endpoint = selectedTab === 'lab' ? '/api/order-lab' : '/api/order-imaging';
-      const requestBody = selectedTab === 'lab' 
-        ? { test: testToOrder }
-        : { imaging: testToOrder };
+      let endpoint, requestBody;
+      
+      // Determine endpoint and request body based on tab
+      if (selectedTab === 'lab') {
+        endpoint = '/api/order-lab';
+        requestBody = { test: testToOrder };
+      } else if (selectedTab === 'imaging') {
+        endpoint = '/api/order-imaging';
+        requestBody = { imaging: testToOrder };
+      } else if (selectedTab === 'procedure') {
+        // For procedures, use the imaging endpoint but mark it as a procedure
+        endpoint = '/api/order-imaging';
+        requestBody = { imaging: testToOrder, type: 'procedure' };
+      }
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -106,44 +157,87 @@ const TestOrderingPanel = ({ isDisabled }) => {
     }
   };
 
+  // Get appropriate labels based on the tab
+  const getLabels = () => {
+    switch (selectedTab) {
+      case 'lab':
+        return {
+          title: 'Laboratory Tests',
+          selectLabel: 'Select Lab Test:',
+          buttonText: 'Order Lab Test',
+          customPlaceholder: 'Enter custom lab test name'
+        };
+      case 'imaging':
+        return {
+          title: 'Imaging Studies',
+          selectLabel: 'Select Imaging Study:',
+          buttonText: 'Order Imaging',
+          customPlaceholder: 'Enter custom imaging study name'
+        };
+      case 'procedure':
+        return {
+          title: 'Investigative Procedures',
+          selectLabel: 'Select Procedure:',
+          buttonText: 'Order Procedure',
+          customPlaceholder: 'Enter custom procedure name'
+        };
+      default:
+        return {
+          title: 'Order Tests',
+          selectLabel: 'Select Test:',
+          buttonText: 'Order Test',
+          customPlaceholder: 'Enter custom test name'
+        };
+    }
+  };
+
+  const labels = getLabels();
+
+  // Don't render tab buttons if tab type is forced
+  const renderTabButtons = !forceTabType && (
+    <div className="tabs">
+      <button 
+        className={`tab-btn ${selectedTab === 'lab' ? 'active' : ''}`}
+        onClick={() => {
+          setSelectedTab('lab');
+          setSelectedTest('');
+          setCustomTest('');
+          setShowCustomInput(false);
+          setTestResults(null);
+        }}
+        disabled={isDisabled}
+      >
+        Lab Tests
+      </button>
+      <button 
+        className={`tab-btn ${selectedTab === 'imaging' ? 'active' : ''}`}
+        onClick={() => {
+          setSelectedTab('imaging');
+          setSelectedTest('');
+          setCustomTest('');
+          setShowCustomInput(false);
+          setTestResults(null);
+        }}
+        disabled={isDisabled}
+      >
+        Imaging & Procedures
+      </button>
+    </div>
+  );
+
   return (
-    <div className="test-ordering-panel">
-      <div className="panel-header">
-        <h3>Order Tests & Imaging</h3>
-      </div>
+    <div className={`test-ordering-panel ${forceTabType ? 'full-width' : ''}`}>
+      {!forceTabType && (
+        <div className="panel-header">
+          <h3>Order Tests & Imaging</h3>
+        </div>
+      )}
       
-      <div className="tabs">
-        <button 
-          className={`tab-btn ${selectedTab === 'lab' ? 'active' : ''}`}
-          onClick={() => {
-            setSelectedTab('lab');
-            setSelectedTest('');
-            setCustomTest('');
-            setShowCustomInput(false);
-            setTestResults(null);
-          }}
-          disabled={isDisabled}
-        >
-          Lab Tests
-        </button>
-        <button 
-          className={`tab-btn ${selectedTab === 'imaging' ? 'active' : ''}`}
-          onClick={() => {
-            setSelectedTab('imaging');
-            setSelectedTest('');
-            setCustomTest('');
-            setShowCustomInput(false);
-            setTestResults(null);
-          }}
-          disabled={isDisabled}
-        >
-          Imaging & Procedures
-        </button>
-      </div>
+      {renderTabButtons}
       
       <div className="test-selection">
         <label htmlFor="test-select">
-          Select {selectedTab === 'lab' ? 'Lab Test' : 'Imaging Study/Procedure'}:
+          {labels.selectLabel}
         </label>
         <select 
           id="test-select" 
@@ -152,7 +246,7 @@ const TestOrderingPanel = ({ isDisabled }) => {
           disabled={isDisabled || isOrdering}
         >
           <option value="">
-            -- Select {selectedTab === 'lab' ? 'Test' : 'Study/Procedure'} --
+            -- Select {selectedTab === 'lab' ? 'Test' : selectedTab === 'imaging' ? 'Study' : 'Procedure'} --
           </option>
           {currentOptions.map(option => (
             <option key={option.value} value={option.value}>
@@ -165,7 +259,7 @@ const TestOrderingPanel = ({ isDisabled }) => {
           <div className="custom-test-input">
             <input
               type="text"
-              placeholder={`Enter custom ${selectedTab === 'lab' ? 'lab test' : 'imaging/procedure'} name`}
+              placeholder={labels.customPlaceholder}
               value={customTest}
               onChange={handleCustomTestChange}
               disabled={isDisabled || isOrdering}
@@ -183,7 +277,7 @@ const TestOrderingPanel = ({ isDisabled }) => {
           onClick={handleOrderTest}
           disabled={isDisabled || isOrdering || (!selectedTest || (selectedTest === 'custom' && !customTest))}
         >
-          {isOrdering ? 'Ordering...' : `Order ${selectedTab === 'lab' ? 'Test' : 'Study/Procedure'}`}
+          {isOrdering ? 'Ordering...' : labels.buttonText}
         </button>
       </div>
       
