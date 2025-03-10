@@ -625,3 +625,35 @@ select:focus {
   transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2) !important;
 }
+
+/* Add these styles to your App.css */
+
+.vital-signs-container {
+  margin: 1rem auto;
+  max-width: 1500px;
+  width: 100%;
+  padding: 0 1rem;
+}
+
+/* Adjust the patient-grid-layout to account for the vital signs */
+.patient-grid-layout {
+  padding-top: 0.5rem;
+  height: calc(100vh - 250px); /* Reduce height to accommodate vital signs */
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .vital-signs-container {
+    margin: 0.5rem auto;
+  }
+  
+  .patient-grid-layout {
+    height: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .vital-signs-container {
+    padding: 0 0.5rem;
+  }
+}
