@@ -181,6 +181,102 @@ class LabSystem:
                 "ref_range": "0.9-1.1",
                 "critical_low": None,
                 "critical_high": 5.0
+            },
+            "RBC": {
+                "units": "x10^12/L",
+                "ref_range": "4.2-5.4" if gender == "female" else "4.5-5.9",
+                "critical_low": 2.5,
+                "critical_high": 7.0
+            },
+            "Hematocrit": {
+                "units": "%",
+                "ref_range": "37-47" if gender == "female" else "40-52",
+                "critical_low": 20,
+                "critical_high": 60
+            },
+            "MCV": {
+                "units": "fL",
+                "ref_range": "80-100",
+                "critical_low": None,
+                "critical_high": None
+            },
+            "MCH": {
+                "units": "pg",
+                "ref_range": "27-34",
+                "critical_low": None,
+                "critical_high": None
+            },
+            "MCHC": {
+                "units": "g/dL",
+                "ref_range": "32-36",
+                "critical_low": None,
+                "critical_high": None
+            },
+            "BUN": {
+                "units": "mg/dL",
+                "ref_range": "7-20",
+                "critical_low": None,
+                "critical_high": 100
+            },
+            "Calcium": {
+                "units": "mg/dL",
+                "ref_range": "8.5-10.5",
+                "critical_low": 6.0,
+                "critical_high": 13.0
+            },
+            "Chloride": {
+                "units": "mmol/L",
+                "ref_range": "96-106",
+                "critical_low": 80,
+                "critical_high": 120
+            },
+            "CO2": {
+                "units": "mmol/L",
+                "ref_range": "23-29",
+                "critical_low": 10,
+                "critical_high": 40
+            },
+            "AST": {
+                "units": "U/L",
+                "ref_range": "5-40",
+                "critical_low": None,
+                "critical_high": 1000
+            },
+            "ALT": {
+                "units": "U/L",
+                "ref_range": "5-40",
+                "critical_low": None,
+                "critical_high": 1000
+            },
+            "Alkaline Phosphatase": {
+                "units": "U/L",
+                "ref_range": "35-105",
+                "critical_low": None,
+                "critical_high": 1000
+            },
+            "Total Bilirubin": {
+                "units": "mg/dL",
+                "ref_range": "0.1-1.2",
+                "critical_low": None,
+                "critical_high": 15.0
+            },
+            "Albumin": {
+                "units": "g/dL",
+                "ref_range": "3.5-5.0",
+                "critical_low": 1.5,
+                "critical_high": None
+            },
+            "Total Protein": {
+                "units": "g/dL",
+                "ref_range": "6.0-8.0",
+                "critical_low": 3.0,
+                "critical_high": 12.0
+            },
+            "TSH": {
+                "units": "mIU/L",
+                "ref_range": "0.4-4.0",
+                "critical_low": 0.01,
+                "critical_high": 50.0
             }
         }
         
@@ -232,7 +328,7 @@ Patient information:
 - Age: {case.get('age', 'Unknown')}
 - Gender: {case.get('gender', 'Unknown')}
 - Presenting complaint: {case.get('presenting_complaint', 'Unknown')}
-- Diagnosis: {case.get('diagnosis', 'Unknown')} (use to guide abnormal values)
+- Diagnosis: {case.get('diagnosis', case.get('expected_diagnosis', 'Unknown'))} (use to guide abnormal values)
 
 Generate lab results for these tests: {json.dumps(expanded_tests)}
 
@@ -243,9 +339,22 @@ For each test, include:
 4. Reference range
 5. Flag (H for high, L for low, C for critical, or blank if normal)
 
-Make the values related to the diagnosis: {case.get('diagnosis', 'Unknown')} as abnormal
+Make the values related to the diagnosis: {case.get('diagnosis', case.get('expected_diagnosis', 'Unknown'))} as abnormal
 
-Return as JSON object with array of test results and a short interpretation summary.
+Return a JSON object with exactly this format:
+{{
+  "results": [
+    {{
+      "test_name": "Test 1",
+      "result": "value",
+      "units": "units",
+      "reference_range": "range",
+      "flag": ""
+    }},
+    ...
+  ],
+  "interpretation": "Brief summary of results and clinical significance"
+}}
 """
 
             response = self.client.chat.completions.create(
@@ -258,8 +367,13 @@ Return as JSON object with array of test results and a short interpretation summ
                 response_format={"type": "json_object"}
             )
             
+            # Log the entire response for debugging
+            logger.debug(f"Complete LLM response: {response.choices[0].message.content}")
+            
             # Parse the generated results
-            generated_results = json.loads(response.choices[0].message.content)
+            result_content = response.choices[0].message.content
+            logger.info(f"Generated results: {result_content[:200]}...")
+            generated_results = json.loads(result_content)
             
             # Ensure proper structure and enhance with reference information
             structured_results = self._structure_lab_results(generated_results, reference_ranges)
@@ -309,10 +423,43 @@ Return as JSON object with array of test results and a short interpretation summ
         """
         structured_results = {"results": []}
         critical_values = []
+        interpretation = "No interpretation provided."
         
-        for test_result in generated_results.get("results", []):
+        # Set default interpretation if provided in the response
+        if "interpretation" in generated_results and generated_results["interpretation"]:
+            interpretation = generated_results["interpretation"]
+        
+        # Check for results in different possible formats
+        results_list = None
+        if "results" in generated_results and isinstance(generated_results["results"], list):
+            results_list = generated_results["results"]
+        elif "lab_results" in generated_results and isinstance(generated_results["lab_results"], list):
+            # Handle alternative format where results are under "lab_results" key
+            results_list = generated_results["lab_results"]
+            logger.info("Found lab results under 'lab_results' key instead of 'results'")
+        
+        if not results_list:
+            logger.warning("Generated results missing valid results list, creating empty structure")
+            structured_results["interpretation"] = interpretation
+            structured_results["critical_values"] = []
+            return structured_results
+            
+        for test_result in results_list:
+            if not isinstance(test_result, dict):
+                logger.warning(f"Skipping non-dict test result: {test_result}")
+                continue
+                
+            # Handle different key names in the response
             test_name = test_result.get("test_name", "Unknown Test")
-            value = test_result.get("result", "N/A")
+            
+            # Try different field names for result value
+            if "result" in test_result:
+                value = test_result["result"]
+            elif "result_value" in test_result:
+                value = test_result["result_value"]
+            else:
+                value = "N/A"
+                
             units = test_result.get("units", "")
             reference = test_result.get("reference_range", "")
             flag = test_result.get("flag", "")
@@ -327,7 +474,7 @@ Return as JSON object with array of test results and a short interpretation summ
                 
                 # Check for critical values
                 try:
-                    if isinstance(value, (int, float)) or (isinstance(value, str) and value.replace('.', '', 1).isdigit()):
+                    if isinstance(value, (int, float)) or (isinstance(value, str) and value.replace('.', '', 1).replace('-', '', 1).isdigit()):
                         numeric_value = float(value)
                         critical_low = ref_data.get("critical_low")
                         critical_high = ref_data.get("critical_high")
@@ -348,6 +495,17 @@ Return as JSON object with array of test results and a short interpretation summ
                                 "units": units,
                                 "threshold": f"> {critical_high}"
                             })
+                        elif flag == "" and reference:
+                            # Check if abnormal but not critical
+                            try:
+                                if "-" in reference:
+                                    ref_min, ref_max = map(float, reference.split("-"))
+                                    if numeric_value < ref_min:
+                                        flag = "L"
+                                    elif numeric_value > ref_max:
+                                        flag = "H"
+                            except (ValueError, TypeError):
+                                pass
                 except (ValueError, TypeError):
                     # Not a numeric value, skip critical checks
                     pass
@@ -361,11 +519,8 @@ Return as JSON object with array of test results and a short interpretation summ
                 "flag": flag
             })
         
-        # Keep the interpretation if provided
-        if "interpretation" in generated_results:
-            structured_results["interpretation"] = generated_results["interpretation"]
-        
-        # Add critical values
+        # Add interpretation and critical values
+        structured_results["interpretation"] = interpretation
         structured_results["critical_values"] = critical_values
         
         return structured_results
@@ -378,6 +533,21 @@ Return as JSON object with array of test results and a short interpretation summ
         """
         results = []
         
+        diagnosis = case.get("diagnosis", case.get("expected_diagnosis", "Unknown"))
+        
+        # Map certain diagnoses to specific test abnormalities for more realistic results
+        abnormal_patterns = {
+            "Myocardial Infarction": {"Troponin I": 2.5, "CK-MB": 25.0, "Troponin T": 0.5},
+            "Pneumonia": {"WBC": 15.0},
+            "Diabetes": {"Glucose": 250},
+            "Anemia": {"Hemoglobin": 8.0, "Hematocrit": 25},
+            "Sepsis": {"WBC": 20.0, "Lactate": 4.0},
+            "Liver Failure": {"AST": 500, "ALT": 450, "Total Bilirubin": 5.0},
+            "Kidney Failure": {"Creatinine": 3.5, "BUN": 60},
+            "Hyponatremia": {"Sodium": 128},
+            "Hyperkalemia": {"Potassium": 6.2}
+        }
+        
         for test in tests:
             if test in reference_ranges:
                 ref_data = reference_ranges[test]
@@ -385,22 +555,37 @@ Return as JSON object with array of test results and a short interpretation summ
                 # Parse reference range into min and max
                 try:
                     ref_range = ref_data["ref_range"]
-                    if "-" in ref_range:
-                        min_val, max_val = map(float, ref_range.split("-"))
+                    
+                    # Check if this test should be abnormal for this diagnosis
+                    abnormal_value = None
+                    for key_diagnosis, abnormal_tests in abnormal_patterns.items():
+                        if key_diagnosis.lower() in diagnosis.lower() and test in abnormal_tests:
+                            abnormal_value = abnormal_tests[test]
+                            break
+                    
+                    if abnormal_value is not None:
+                        # Use the predefined abnormal value
+                        value = abnormal_value
+                        flag = "H" if abnormal_value > float(ref_range.split("-")[1]) else "L"
+                    elif "-" in ref_range:
                         # Generate a value in the normal range
+                        min_val, max_val = map(float, ref_range.split("-"))
                         import random
                         value = round(min_val + (max_val - min_val) * random.random(), 1)
+                        flag = ""
                     else:
                         value = ref_range
+                        flag = ""
                 except:
                     value = "N/A"
+                    flag = ""
                 
                 results.append({
                     "test_name": test,
                     "result": value,
                     "units": ref_data.get("units", ""),
                     "reference_range": ref_data["ref_range"],
-                    "flag": ""
+                    "flag": flag
                 })
             else:
                 # Generic test with no reference data
@@ -473,7 +658,16 @@ Return as JSON object with array of test results and a short interpretation summ
         report = f"# Laboratory Results\n\n"
         report += f"**Case ID:** {lab_results.get('case_id', 'Unknown')}\n"
         report += f"**Ordered By:** {lab_results.get('ordered_by', 'Unknown')}\n"
-        report += f"**Date/Time:** {lab_results.get('timestamp', 'Unknown')}\n\n"
+        
+        # Format timestamp
+        timestamp = lab_results.get('timestamp', 'Unknown')
+        try:
+            dt = datetime.fromisoformat(timestamp)
+            formatted_timestamp = dt.strftime("%B %d, %Y %I:%M %p")
+        except:
+            formatted_timestamp = timestamp
+            
+        report += f"**Date/Time:** {formatted_timestamp}\n\n"
         
         # Check for critical values
         critical_values = lab_results.get('critical_values', [])
