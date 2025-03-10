@@ -263,15 +263,6 @@ function App() {
               <h2>Investigative Procedures</h2>
               <p className="tab-description">Order specialized procedures to gather additional diagnostic information.</p>
               <div className="procedures-info">
-                <p>This section allows you to order specialized diagnostic and therapeutic procedures.</p>
-                <p>You can use this section to order procedures like:</p>
-                <ul>
-                  <li>Electrocardiogram (ECG/EKG)</li>
-                  <li>Echocardiogram</li>
-                  <li>Stress Tests</li>
-                  <li>Endoscopic Procedures</li>
-                  <li>Specialized Tests</li>
-                </ul>
                 <TestOrderingPanel 
                   isDisabled={isDiagnosisSubmitted}
                   forceTabType="procedure" 
