@@ -1,4 +1,4 @@
-// Modified App.js with tabbed navigation
+// Modified App.js with tabbed navigation and fixed layout for patient tab
 import React, { useState, useEffect } from 'react';
 import ChatWindow from './ChatWindow';
 import DiagnosisPanel from './DiagnosisPanel';
@@ -203,18 +203,18 @@ function App() {
       <div className="tab-content">
         {activeTab === 'patient' && (
           <div className="patient-tab">
-            <div className="content-container">
-              <div className="main-content">
-                <div className="chat-container">
-                  <ChatWindow 
-                    isDiagnosisSubmitted={isDiagnosisSubmitted}
-                    isNewCase={isNewCase}
-                    onNewCaseStart={handleNewCaseStarted}
-                  />
-                </div>
+            <div className="patient-grid-layout">
+              {/* Left column: Chat */}
+              <div className="chat-area">
+                <ChatWindow 
+                  isDiagnosisSubmitted={isDiagnosisSubmitted}
+                  isNewCase={isNewCase}
+                  onNewCaseStart={handleNewCaseStarted}
+                />
               </div>
               
-              <div className="sidebar-content">
+              {/* Right column: Physical exam & diagnosis stacked */}
+              <div className="controls-area">
                 <PhysicalExamPanel 
                   isDisabled={isDiagnosisSubmitted}
                   caseInfo={caseInfo}
@@ -263,6 +263,15 @@ function App() {
               <h2>Investigative Procedures</h2>
               <p className="tab-description">Order specialized procedures to gather additional diagnostic information.</p>
               <div className="procedures-info">
+                <p>This section allows you to order specialized diagnostic and therapeutic procedures.</p>
+                <p>You can use this section to order procedures like:</p>
+                <ul>
+                  <li>Electrocardiogram (ECG/EKG)</li>
+                  <li>Echocardiogram</li>
+                  <li>Stress Tests</li>
+                  <li>Endoscopic Procedures</li>
+                  <li>Specialized Tests</li>
+                </ul>
                 <TestOrderingPanel 
                   isDisabled={isDiagnosisSubmitted}
                   forceTabType="procedure" 
