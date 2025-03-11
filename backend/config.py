@@ -56,6 +56,26 @@ class MedicalSimConfig:
             raise ConnectionError("Failed to connect to Eleven Labs API")
 
     def set_voice(self, voice_id: str, settings: dict = None):
+        """
+        Manually set the voice by voice ID.
+        """
         self.default_voice_id = voice_id
+        if settings:
+            self.voice_settings.update(settings)
+
+    def set_voice_by_gender(self, gender: str, settings: dict = None):
+        """
+        Set the default voice based on the specified gender.
+        :param gender: 'male' or 'female'
+        :param settings: Additional voice settings to update
+        """
+        if gender.lower() == "female":
+            # Set to a female voice id (assumed)
+            self.default_voice_id = "EXAVITQu4vr4xnSDxMaL"
+        elif gender.lower() == "male":
+            # Set to a male voice id (assumed)
+            self.default_voice_id = "TxGEqnHWrfWFTfGW9XjX"
+        else:
+            raise ValueError("Gender must be either 'male' or 'female'")
         if settings:
             self.voice_settings.update(settings)

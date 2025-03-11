@@ -49,7 +49,7 @@ class CaseManager:
             case_dict = case_gen.generate_case(params)
 
             # Log the case for debugging
-            logger.info(f"Generated case: {json.dumps(case_dict, indent = 2)}")
+            logger.info(f"Generated case: {json.dumps(case_dict, indent=2)}")
             
             # Store the diagnosis to avoid repetition in future cases
             if not hasattr(self, 'previous_diagnoses'):
@@ -94,6 +94,10 @@ class CaseManager:
                 else:
                     case_dict["critical_tests"] = ["CBC", "CMP", "Urinalysis"]
             
+            # Set the voice based on the patient's gender (if provided)
+            if "gender" in case_dict and case_dict["gender"].lower() in ["male", "female"]:
+                self.config.set_voice_by_gender(case_dict["gender"])
+
             # Store the case
             self.current_case = case_dict
             
