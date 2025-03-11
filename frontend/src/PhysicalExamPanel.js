@@ -8,38 +8,10 @@ const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
   const [procedureSteps, setProcedureSteps] = useState([]);
   const [stepNumber, setStepNumber] = useState(1);
   const [procedureComplete, setProcedureComplete] = useState(false);
-  const [vitalSigns, setVitalSigns] = useState(null);
   const [examResults, setExamResults] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
-
-  // Fetch vitals on initial load
-  useEffect(() => {
-    if (caseInfo && caseInfo.id) {
-      fetchVitalSigns();
-    }
-  }, [caseInfo]);
-
-  const fetchVitalSigns = async () => {
-    try {
-      const response = await fetch('/api/physical-exam', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system: 'vital_signs' })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch vital signs');
-      }
-      
-      const data = await response.json();
-      setVitalSigns(data);
-    } catch (err) {
-      console.error('Error fetching vital signs:', err);
-      // Don't show error for initial fetch
-    }
-  };
 
   const handleExamNameChange = (e) => {
     setExamName(e.target.value);
@@ -154,11 +126,6 @@ const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
       
       const data = await response.json();
       setExamResults(data);
-      
-      // If it's vital signs, update those separately
-      if (systemToExamine === 'vital_signs') {
-        setVitalSigns(data);
-      }
     } catch (err) {
       console.error('Error performing examination:', err);
       setError(err.message || 'Error performing examination');
@@ -184,20 +151,6 @@ const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
         <h3>Physical Examination</h3>
         <p>Enter examination name and procedure steps in the correct order</p>
       </div>
-      
-      {vitalSigns && (
-        <div className="vital-signs-display">
-          <h4>Current Vital Signs</h4>
-          <div className="vital-signs-grid">
-            {Object.entries(vitalSigns.findings || {}).map(([key, value]) => (
-              <div key={key} className="vital-sign-item">
-                <span className="vital-label">{key}:</span>
-                <span className="vital-value">{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       
       <div className="exam-procedure-section">
         <div className="input-group">

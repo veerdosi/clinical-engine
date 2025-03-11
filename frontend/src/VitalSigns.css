@@ -1,0 +1,314 @@
+.vital-signs-dashboard {
+  background-color: #1a1a2e;
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: 'Roboto', sans-serif;
+  color: #eaeaea;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.vital-signs-title {
+  color: #4aed4f;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+  text-align: center;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #333345;
+  padding-bottom: 0.5rem;
+}
+
+.vital-signs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.vital-sign-card {
+  background-color: #16213e;
+  border-radius: 6px;
+  padding: 1rem;
+  border-left: 3px solid #4aed4f;
+  transition: all 0.3s ease;
+}
+
+.vital-sign-card.abnormal {
+  border-left-color: #e74c3c;
+  animation: pulse-warning 2s infinite;
+}
+
+.vital-sign-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.vital-sign-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #a5a5a5;
+}
+
+.vital-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #4aed4f;
+}
+
+.vital-sign-card.abnormal .vital-value {
+  color: #e74c3c;
+}
+
+.vital-visualization {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Heart Rate Monitor Styles */
+.heart-rate-monitor {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0a0a18;
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.heart-rate-monitor canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Respiratory Rate Visualization Styles */
+.respiratory-visual {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lungs-container {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  animation: breathing var(--breathing-duration, 4s) infinite ease-in-out;
+}
+
+.lung {
+  width: 40px;
+  height: 60px;
+  background-color: #7b98ef;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+}
+
+.left-lung {
+  transform-origin: right center;
+}
+
+.right-lung {
+  transform-origin: left center;
+}
+
+@keyframes breathing {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Blood Pressure Visualization */
+.bp-visual {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bp-gauge {
+  width: 100%;
+  height: 70px;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.bp-bar {
+  flex: 1;
+  background-color: #2ecc71;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: height 1s ease-in-out;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.bp-bar span {
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.bp-labels {
+  display: flex;
+  width: 100%;
+  justify-content: space-around;
+  font-size: 0.8rem;
+  color: #a5a5a5;
+}
+
+/* Temperature Visualization */
+.temperature-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.thermometer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.thermometer-bulb {
+  width: 16px;
+  height: 16px;
+  background-color: #ccc;
+  border-radius: 50%;
+  margin-top: 2px;
+}
+
+.thermometer-stem {
+  width: 8px;
+  height: 70px;
+  background-color: #ccc;
+  border-radius: 4px;
+  margin-top: -2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.thermometer-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #2ecc71;
+  transition: height 1s ease-in-out;
+}
+
+/* Oxygen Saturation Visualization */
+.oxygen-visual {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.oxygen-pulse {
+  width: 60px;
+  height: 60px;
+  background-color: #0a0a18;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  animation: pulse 2s infinite;
+}
+
+.oxygen-pulse:before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: var(--pulse-color, #2ecc71);
+  opacity: var(--pulse-opacity, 0.5);
+  animation: pulse 2s infinite;
+}
+
+.oxygen-icon {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--pulse-color, #2ecc71);
+  z-index: 1;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);
+  }
+  
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
+  }
+  
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);
+  }
+}
+
+/* Pain Score Visualization */
+.pain-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 100%;
+}
+
+.pain-face {
+  font-size: 2.5rem;
+}
+
+.pain-scale {
+  width: 100%;
+  height: 8px;
+  background-color: #0a0a18;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pain-scale-bar {
+  height: 100%;
+  background-color: #2ecc71;
+  border-radius: 4px;
+  transition: width 0.5s ease-in-out;
+}
+
+/* Warning animation */
+@keyframes pulse-warning {
+  0% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+  }
+}
