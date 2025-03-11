@@ -1,19 +1,313 @@
 import json
 import logging
+import aiohttp
+import asyncio
 from typing import Dict, Any, List, Optional
-from openai import Client
 from datetime import datetime
+from openai import Client
 
 logger = logging.getLogger(__name__)
+
+class PerplexityPhysicalExamGenerator:
+    """
+    Uses Perplexity AI to generate medically accurate physical examination findings
+    based on medical literature and clinical guidelines.
+    """
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = "https://api.perplexity.ai"
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        
+    async def generate_exam_findings_async(self, 
+                                   case: Dict[str, Any], 
+                                   system: str) -> Dict[str, Any]:
+        """
+        Generate medically accurate examination findings using Perplexity AI.
+        
+        Args:
+            case: The patient case information
+            system: The body system being examined
+            
+        Returns:
+            Dict containing the generated examination findings
+        """
+        endpoint = f"{self.base_url}/chat/completions"
+        
+        # Create a detailed prompt with all relevant medical information
+        prompt = self._create_detailed_prompt(case, system)
+        
+        payload = {
+            "model": "sonar",  # Using Perplexity's model with web search
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a clinical examination specialist generating physical examination findings for a medical simulation. "
+                        "Create detailed, medically accurate findings based on the case information and system being examined. "
+                        "Return a JSON object with the findings, ensuring all observations are consistent with current medical literature."
+                    )
+                },
+                {
+                    "role": "user", 
+                    "content": prompt
+                }
+            ],
+            "options": {
+                "search_focus": "internet"
+            },
+            "max_tokens": 4096,
+            "temperature": 0.2
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    endpoint, 
+                    headers=self.headers,
+                    json=payload,
+                    timeout=60  # Increased timeout for thorough search
+                ) as response:
+                    response_text = await response.text()
+                    
+                    if response.status != 200:
+                        logger.error(f"Perplexity API error: {response.status} - {response_text[:500]}")
+                        return {"error": f"Perplexity API error: {response.status}"}
+                    
+                    result = json.loads(response_text)
+                    
+                    # Extract the content from Perplexity's response
+                    if "choices" in result and len(result["choices"]) > 0:
+                        content = result["choices"][0]["message"]["content"]
+                        
+                        try:
+                            # Find JSON in the response
+                            json_start = content.find('{')
+                            json_end = content.rfind('}') + 1
+                            
+                            if json_start >= 0 and json_end > json_start:
+                                json_content = content[json_start:json_end]
+                                exam_findings = json.loads(json_content)
+                                
+                                # Add additional metadata 
+                                exam_findings["generated_by"] = "perplexity"
+                                exam_findings["timestamp"] = datetime.now().isoformat()
+                                exam_findings["references"] = exam_findings.get("references", [])
+                                
+                                return exam_findings
+                            else:
+                                logger.error(f"No valid JSON found in response. Content: {content}")
+                                return {"error": "No valid JSON found in response"}
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Error parsing JSON from Perplexity: {str(e)}")
+                            return {"error": f"Invalid JSON in response: {str(e)}"}
+                    else:
+                        logger.error("No content in Perplexity response")
+                        return {"error": "No content in Perplexity response"}
+        except Exception as e:
+            error_details = str(e)
+            logger.error(f"Error in Perplexity search: {error_details}")
+            return {"error": f"Perplexity API error: {error_details}"}
+    
+    def generate_exam_findings(self, case: Dict[str, Any], system: str) -> Dict[str, Any]:
+        """
+        Synchronous wrapper for generate_exam_findings_async.
+        
+        Args:
+            case: The patient case information
+            system: The body system being examined
+            
+        Returns:
+            Dict containing the generated examination findings
+        """
+        try:
+            # Get or create event loop
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+            # Run the async method in the event loop
+            results = loop.run_until_complete(
+                self.generate_exam_findings_async(case, system)
+            )
+            return results
+        except Exception as e:
+            logger.error(f"Error in synchronous Perplexity generation: {str(e)}")
+            return {"error": f"Perplexity generation error: {str(e)}"}
+            
+    def _create_detailed_prompt(self, case: Dict[str, Any], system: str) -> str:
+        """
+        Create a detailed prompt for Perplexity with all relevant medical information.
+        
+        Args:
+            case: The patient case information
+            system: The body system being examined
+            
+        Returns:
+            Detailed prompt string for Perplexity
+        """
+        # Extract key case information
+        diagnosis = case.get("diagnosis", 
+                         case.get("expected_diagnosis", "Unknown"))
+        
+        age = case.get("age", "Unknown")
+        gender = case.get("gender", "Unknown")
+        presenting_complaint = case.get("presenting_complaint", "Unknown")
+        
+        # Extract symptoms and comorbidities
+        symptoms = self._extract_symptoms(case)
+        comorbidities = self._extract_comorbidities(case)
+        
+        # Build the system-specific prompt
+        if system.lower() == 'cardiovascular' or system.lower() == 'cardiac':
+            system_prompt = f"""Focus on heart sounds (S1, S2, murmurs, rubs, gallops), 
+jugular venous pressure, carotid pulses, peripheral pulses, edema, and skin temperature.
+For this {diagnosis} case, pay special attention to auscultation findings at standard cardiac landmarks."""
+        elif system.lower() == 'respiratory' or system.lower() == 'pulmonary':
+            system_prompt = f"""Focus on respiratory rate, pattern, effort, percussion notes, 
+vocal fremitus, breath sounds (vesicular, bronchial, bronchovesicular), adventitious sounds (crackles, wheezes, rhonchi, rubs), 
+and accessory muscle use. For this {diagnosis} case, include specific findings in all lung fields."""
+        elif system.lower() == 'abdominal' or system.lower() == 'gastrointestinal':
+            system_prompt = f"""Focus on inspection (contour, scars), auscultation (bowel sounds), 
+percussion (tympany, dullness, fluid wave), and palpation (tenderness, masses, organomegaly, Murphy's sign, 
+McBurney's point). For this {diagnosis} case, be specific about findings in all four quadrants."""
+        elif system.lower() == 'neurological':
+            system_prompt = f"""Focus on mental status, cranial nerves, motor function (strength, tone), 
+sensory function, reflexes, coordination, and gait assessment. For this {diagnosis} case, 
+include specific findings across all major neurological domains."""
+        elif system.lower() == 'heent' or system.lower() == 'head':
+            system_prompt = f"""Focus on head (inspection, palpation), eyes (visual acuity, fields, pupils, extraocular movements, fundi),
+ears (external, tympanic membranes, hearing), nose (patency, septum, mucosa), and throat (oropharynx, tonsils). 
+For this {diagnosis} case, include specific findings relevant to each component."""
+        elif system.lower() == 'musculoskeletal':
+            system_prompt = f"""Focus on joints (inspection, palpation, range of motion), muscles (strength, tone, bulk),
+and special tests relevant to this {diagnosis}. Include findings across upper and lower extremities, spine, and any specific
+areas of concern based on the symptoms."""
+        elif system.lower() == 'skin':
+            system_prompt = f"""Focus on skin color, texture, turgor, lesions (primary and secondary), 
+rashes, and distribution patterns. For this {diagnosis} case, describe any dermatological findings 
+with proper medical terminology and standard descriptors (color, shape, size, borders, etc.)."""
+        else:
+            system_prompt = f"Provide detailed physical examination findings for the {system} system."
+        
+        # Build the complete prompt
+        prompt = f"""Generate physical examination findings for a {age}-year-old {gender} patient with {diagnosis}.
+
+Patient Information:
+- Presenting complaint: {presenting_complaint}
+- Diagnosis: {diagnosis}
+- Symptoms: {', '.join(symptoms) if symptoms else 'Not specified'}
+- Comorbidities: {', '.join(comorbidities) if comorbidities else 'None'}
+
+You are performing a {system} examination.
+
+{system_prompt}
+
+Create REALISTIC and MEDICALLY ACCURATE physical examination findings that would be expected in a patient with {diagnosis}. 
+Include appropriate positive and negative findings that would be present in this case.
+Be specific about which signs are present and which are absent.
+
+Return the results in this JSON format:
+{{
+  "findings": {{
+    "key_finding_1": "description",
+    "key_finding_2": "description",
+    ...
+  }},
+  "interpretation": "Brief clinical interpretation of findings",
+  "references": [
+    "Source 1: citation or URL",
+    "Source 2: citation or URL",
+    ...
+  ]
+}}
+
+Use PubMed, medical journals, and clinical guidelines to ensure the physical examination findings are MEDICALLY ACCURATE and REALISTIC for this specific diagnosis.
+"""
+        return prompt
+        
+    def _extract_symptoms(self, case: Dict[str, Any]) -> list:
+        """Extract symptoms from various possible formats in the case data"""
+        symptoms = []
+        
+        # Check for key_symptoms as a list
+        if "key_symptoms" in case and isinstance(case["key_symptoms"], list):
+            symptoms.extend(case["key_symptoms"])
+        
+        # Check for key_symptoms as a dictionary
+        elif "key_symptoms" in case and isinstance(case["key_symptoms"], dict):
+            for system, symptom in case["key_symptoms"].items():
+                if symptom and symptom != "None":
+                    symptoms.append(f"{symptom}")
+        
+        # Check for symptoms in presentation
+        if "presentation" in case:
+            presentation = case["presentation"]
+            
+            if "classic_symptoms" in presentation and isinstance(presentation["classic_symptoms"], list):
+                symptoms.extend(presentation["classic_symptoms"])
+                
+            if "description" in presentation and isinstance(presentation["description"], str):
+                symptoms.append(presentation["description"])
+                
+        # Check for atypical_presentation
+        if "atypical_presentation" in case:
+            atypical = case["atypical_presentation"]
+            if "description" in atypical and isinstance(atypical["description"], str):
+                symptoms.append(atypical["description"])
+                
+        # Check condition description
+        if "condition" in case and isinstance(case["condition"], dict):
+            if "description" in case["condition"]:
+                symptoms.append(case["condition"]["description"])
+                
+        # Check for symptoms as array directly in case
+        if "symptoms" in case and isinstance(case["symptoms"], list):
+            symptoms.extend(case["symptoms"])
+            
+        # Check presenting_complaint
+        if "presenting_complaint" in case and case["presenting_complaint"]:
+            symptoms.append(case["presenting_complaint"])
+                
+        # Deduplicate symptoms
+        return list(set(symptoms))
+
+    def _extract_comorbidities(self, case: Dict[str, Any]) -> list:
+        """Extract comorbidities from various possible formats in the case data"""
+        comorbidities = []
+        
+        # Check for comorbidities as a list
+        if "comorbidities" in case and isinstance(case["comorbidities"], list):
+            comorbidities.extend(case["comorbidities"])
+            
+        # Check for comorbidities in atypical_presentation
+        if "atypical_presentation" in case and isinstance(case["atypical_presentation"], dict):
+            if "comorbidities" in case["atypical_presentation"] and isinstance(case["atypical_presentation"]["comorbidities"], list):
+                comorbidities.extend(case["atypical_presentation"]["comorbidities"])
+                
+        # Check for past_medical_conditions
+        if "past_medical_conditions" in case and isinstance(case["past_medical_conditions"], list):
+            comorbidities.extend(case["past_medical_conditions"])
+            
+        # Deduplicate comorbidities
+        return list(set(comorbidities))
 
 class PhysicalExamSystem:
     """
     Enhanced system for generating physical examination findings based on the patient case
-    and verifying examination procedures.
+    and verifying examination procedures. Now uses Perplexity AI when available for
+    medically accurate findings based on current literature.
     """
     def __init__(self, config):
         self.config = config
         self.client = Client(api_key=config.openai_api_key)
+        # Initialize Perplexity client if API key is available
+        self.perplexity_client = PerplexityPhysicalExamGenerator(config.perplexity_api_key) if hasattr(config, 'perplexity_api_key') and config.perplexity_api_key else None
         self.results_cache = {}  # Cache to store generated results
         self.procedure_cache = {}  # Cache to store procedure verification
         
@@ -26,6 +320,7 @@ class PhysicalExamSystem:
     def perform_examination(self, case: Dict[str, Any], system: str, procedure_verified=False) -> Dict[str, Any]:
         """
         Generate physical examination findings based on the case and selected body system.
+        Now with enhanced medical accuracy using Perplexity AI when available.
         
         Args:
             case: The patient case information
@@ -56,6 +351,32 @@ class PhysicalExamSystem:
             }
         
         try:
+            # Try using Perplexity AI if available
+            if self.perplexity_client:
+                try:
+                    logger.info(f"Generating examination findings using Perplexity AI for: {system}")
+                    
+                    perplexity_results = self.perplexity_client.generate_exam_findings(case, system)
+                    
+                    # Check if we got valid results or an error
+                    if "error" not in perplexity_results:
+                        # Add timestamp if not present
+                        if "timestamp" not in perplexity_results:
+                            perplexity_results["timestamp"] = datetime.now().isoformat()
+                            
+                        # Cache the results
+                        self.results_cache[cache_key] = perplexity_results
+                        
+                        return perplexity_results
+                    else:
+                        # Log the error but continue with OpenAI fallback
+                        logger.warning(f"Perplexity generation failed: {perplexity_results.get('error')}")
+                        logger.info("Falling back to OpenAI for examination findings generation")
+                except Exception as e:
+                    logger.error(f"Error using Perplexity for examination findings: {str(e)}")
+                    logger.info("Falling back to OpenAI for examination findings generation")
+            
+            # Original OpenAI-based implementation (fallback)
             # Extract key case info for context
             diagnosis = case.get("diagnosis", 
                              case.get("expected_diagnosis", 
