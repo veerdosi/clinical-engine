@@ -199,205 +199,7 @@ class EnhancedCaseGenerator(CaseGenerator):
         
         difficulty_desc = difficulty_descriptions.get(params.difficulty, "condition")
         
-        # Create a specialized prompt based on specialty, adding the seed for randomness
-        if params.specialty == "Cardiology":
-            query = f"""
-    Generate a realistic cardiac patient case for medical education. 
-    The case should be of {params.difficulty} difficulty ({difficulty_desc}).
-    Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
-
-    Create a {difficulty_desc} in the field of cardiology. The case should include appropriate:
-    - Diagnosis (a specific cardiac condition)
-    - Key cardiac symptoms (with appropriate character, location, duration)
-    - Vital signs with realistic RANGES for this condition (not just single values)
-    - Pertinent physical examination findings
-    - Relevant past medical history and risk factors
-    - Critical cardiac tests and expected findings
-    - Demographics appropriate for this condition
-
-    IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
-    - Heart rate range (min and max values during monitoring, e.g., 80-110 bpm for tachycardia)
-    - Blood pressure range (systolic and diastolic min/max values, e.g., 150-180/90-100 mmHg for hypertension)
-    - Respiratory rate range (e.g., 18-24 breaths/min)
-    - Temperature range (e.g., 36.8-37.2 °C)
-    - Oxygen saturation range (e.g., 88-94% for hypoxemia)
-
-    IMPORTANT: Include a "Pain" field directly in the vitals object with a value like "7/10" representing the patient's self-reported pain level.
-
-    IMPORTANT: Include a "pain_description" field in the main case object with details about the character, location, and pattern of pain (e.g., "7/10 substernal crushing pain radiating to the left arm, worsened by exertion").
-
-    IMPORTANT: Include a "recommended_physical_exams" field with an array of specific physical examinations that are indicated for this case. 
-    For each examination, provide:
-    - Name of the examination (e.g., "Cardiac Auscultation", "Jugular Venous Pressure Assessment")
-    - Clinical significance (why this exam is important for this case)
-    - Expected findings (what a clinician would likely observe in this patient)
-
-    Be sure to include "Pain Assessment" as one of the recommended physical exams, using the 0-10 Numeric Rating Scale and including quality, radiation, and exacerbating/relieving factors for chest pain.
-
-    Using these ranges will enable dynamic visualization of the patient's status over time.
-
-    Base your case on evidence-based medical information and include citations from cardiology literature.
-    Return ONLY a valid JSON object as specified, nothing else.
-    """
-        elif params.specialty == "Neurology":
-            query = f"""
-    Generate a realistic neurology patient case for medical education. 
-    The case should be of {params.difficulty} difficulty ({difficulty_desc}).
-    Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
-
-    Create a {difficulty_desc} in the field of neurology. The case should include appropriate:
-    - Specific neurological diagnosis
-    - Key neurological symptoms and their progression
-    - Vital signs with realistic RANGES for this condition (not just single values)
-    - Neurological examination findings
-    - Relevant past medical history and risk factors
-    - Critical neurological tests (imaging, CSF analysis if relevant)
-    - Demographics appropriate for this condition
-
-    IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
-    - Heart rate range (min and max values during monitoring, e.g., 60-100 bpm)
-    - Blood pressure range (systolic and diastolic min/max values, e.g., 110-140/60-90 mmHg)
-    - Respiratory rate range (e.g., 12-20 breaths/min)
-    - Temperature range (e.g., 36.5-37.5 °C)
-    - Oxygen saturation range (e.g., 95-100%)
-
-    IMPORTANT: Include a "Pain" field directly in the vitals object with a value like "8/10" representing the patient's self-reported pain level.
-
-    IMPORTANT: Include a "pain_description" field in the main case object with details about the character, location, and pattern of pain (e.g., "8/10 throbbing headache localized to the right temporal region, associated with photophobia").
-
-    IMPORTANT: Include a "recommended_physical_exams" field with an array of specific physical examinations that are indicated for this case. 
-    For each examination, provide:
-    - Name of the examination (e.g., "Cranial Nerve Assessment", "Motor Function Exam", "Deep Tendon Reflexes")
-    - Clinical significance (why this exam is important for this case)
-    - Expected findings (what a clinician would likely observe in this patient)
-
-    Be sure to include "Pain Assessment" as one of the recommended physical exams, using the 0-10 Numeric Rating Scale and including location, quality, and temporal pattern for headache or neuralgic pain.
-
-    Using these ranges will enable dynamic visualization of the patient's status over time.
-
-    Base your case on evidence-based medical information and include citations from neurology literature.
-    Return ONLY a valid JSON object as specified, nothing else.
-    """
-        elif params.specialty == "Pulmonology":
-            query = f"""
-    Generate a realistic pulmonology patient case for medical education. 
-    The case should be of {params.difficulty} difficulty ({difficulty_desc}).
-    Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
-
-    Create a {difficulty_desc} in the field of pulmonology. The case should include appropriate:
-    - Specific pulmonary diagnosis
-    - Key respiratory symptoms
-    - Vital signs with realistic RANGES for this condition (not just single values)
-    - Pertinent respiratory examination findings
-    - Relevant past medical history and risk factors (include smoking history if relevant)
-    - Critical pulmonary tests (PFTs, imaging, ABGs if relevant)
-    - Demographics appropriate for this condition
-
-    IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
-    - Heart rate range (min and max values during monitoring, e.g., 90-120 bpm for respiratory distress)
-    - Blood pressure range (systolic and diastolic min/max values, e.g., 110-140/60-90 mmHg)
-    - Respiratory rate range (e.g., 22-32 breaths/min for respiratory conditions)
-    - Temperature range (e.g., 36.5-38.5 °C depending on infection status)
-    - Oxygen saturation range (e.g., 85-92% for COPD exacerbation)
-
-    IMPORTANT: Include a "Pain" field directly in the vitals object with a value like "5/10" representing the patient's self-reported pain level.
-
-    IMPORTANT: Include a "pain_description" field in the main case object with details about the character, location, and pattern of pain (e.g., "5/10 sharp pleuritic pain in the right lower chest, worse with deep inspiration").
-
-    IMPORTANT: Include a "recommended_physical_exams" field with an array of specific physical examinations that are indicated for this case. 
-    For each examination, provide:
-    - Name of the examination (e.g., "Respiratory Inspection", "Chest Percussion", "Breath Sound Auscultation")
-    - Clinical significance (why this exam is important for this case)
-    - Expected findings (what a clinician would likely observe in this patient)
-
-    Be sure to include "Pain Assessment" as one of the recommended physical exams, using the 0-10 Numeric Rating Scale and including relation to breathing for chest or pleuritic pain.
-
-    Using these ranges will enable dynamic visualization of the patient's status over time.
-
-    Base your case on evidence-based medical information and include citations from pulmonology literature.
-    Return ONLY a valid JSON object as specified, nothing else.
-    """
-        elif params.specialty == "Emergency Medicine":
-            query = f"""
-    Generate a realistic emergency medicine patient case for medical education.
-    The case should be of {params.difficulty} difficulty ({difficulty_desc}).
-    Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
-
-    Create a {difficulty_desc} commonly seen in emergency departments. The case should include appropriate:
-    - Specific emergency diagnosis
-    - Key symptoms with appropriate time course and severity
-    - Vital signs with realistic RANGES for this condition (not just single values)
-    - Pertinent physical examination findings
-    - Relevant past medical history and risk factors
-    - Critical emergency tests and studies
-    - Demographics appropriate for this condition
-
-    IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
-    - Heart rate range (min and max values during monitoring, e.g., 110-140 bpm for shock)
-    - Blood pressure range (systolic and diastolic min/max values, e.g., 80-100/40-60 mmHg for hypotension) 
-    - Respiratory rate range (e.g., 24-36 breaths/min for respiratory distress)
-    - Temperature range (e.g., 38.5-40.2 °C for fever or 35-35.5 °C for hypothermia)
-    - Oxygen saturation range (e.g., 82-92% for hypoxemia)
-
-    IMPORTANT: Include a "Pain" field directly in the vitals object with a value like "9/10" representing the patient's self-reported pain level.
-
-    IMPORTANT: Include a "pain_description" field in the main case object with details about the character, location, and pattern of pain (e.g., "9/10 sharp, localized right lower quadrant pain with rebound tenderness, worse with movement").
-
-    IMPORTANT: Include a "recommended_physical_exams" field with an array of specific physical examinations that are indicated for this case. 
-    For each examination, provide:
-    - Name of the examination (e.g., "Primary Survey", "Secondary Survey", "FAST Exam")
-    - Clinical significance (why this exam is important for this case)
-    - Expected findings (what a clinician would likely observe in this patient)
-
-    Be sure to include "Pain Assessment" as one of the recommended physical exams, using the 0-10 Numeric Rating Scale and addressing onset, provocation, quality, radiation, severity, and time factors (OPQRST).
-
-    Using these ranges will enable dynamic visualization of the patient's status over time.
-
-    Base your case on evidence-based medical information and include citations from emergency medicine literature.
-    Return ONLY a valid JSON object as specified, nothing else.
-    """
-        elif params.specialty == "Internal Medicine":
-            query = f"""
-    Generate a realistic internal medicine patient case for medical education.
-    The case should be of {params.difficulty} difficulty ({difficulty_desc}).
-    Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
-
-    Create a {difficulty_desc} in general internal medicine. The case should include appropriate:
-    - Specific medical diagnosis
-    - Key symptoms with appropriate characteristics
-    - Vital signs with realistic RANGES for this condition (not just single values)
-    - Pertinent physical examination findings across body systems
-    - Relevant past medical history, medications, and risk factors 
-    - Critical laboratory and diagnostic tests
-    - Demographics appropriate for this condition
-
-    IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
-    - Heart rate range (min and max values during monitoring, e.g., 70-110 bpm)
-    - Blood pressure range (systolic and diastolic min/max values, e.g., 110-160/70-95 mmHg)
-    - Respiratory rate range (e.g., 14-24 breaths/min)
-    - Temperature range (e.g., 36.8-38.2 °C)
-    - Oxygen saturation range (e.g., 90-98%)
-
-    IMPORTANT: Include a "Pain" field directly in the vitals object with a value like "4/10" representing the patient's self-reported pain level.
-
-    IMPORTANT: Include a "pain_description" field in the main case object with details about the character, location, and pattern of pain (e.g., "4/10 dull, diffuse abdominal discomfort worsening after meals").
-
-    IMPORTANT: Include a "recommended_physical_exams" field with an array of specific physical examinations that are indicated for this case. 
-    For each examination, provide:
-    - Name of the examination (e.g., "Complete Head-to-Toe Exam", "Cardiac Exam", "Abdominal Exam")
-    - Clinical significance (why this exam is important for this case)
-    - Expected findings (what a clinician would likely observe in this patient)
-
-    Be sure to include "Pain Assessment" as one of the recommended physical exams, using the 0-10 Numeric Rating Scale with comprehensive characterization of pain symptoms.
-
-    Using these ranges will enable dynamic visualization of the patient's status over time.
-
-    Base your case on evidence-based medical information and include citations from medical literature.
-    Return ONLY a valid JSON object as specified, nothing else.
-    """
-        else:
-            # Generic query for other specialties
-            query = f"""
+        query = f"""
     Generate a realistic patient case for medical education in {params.specialty}. 
     The case should be of {params.difficulty} difficulty ({difficulty_desc}).
     Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
@@ -412,19 +214,19 @@ class EnhancedCaseGenerator(CaseGenerator):
     - Demographics appropriate for this condition
 
     IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
-    - Heart rate range (min and max values during monitoring, e.g., 60-110 bpm)
-    - Blood pressure range (systolic and diastolic min/max values, e.g., 110-150/60-90 mmHg)
-    - Respiratory rate range (e.g., 14-24 breaths/min)
-    - Temperature range (e.g., 36.5-38.0 °C)
-    - Oxygen saturation range (e.g., 92-99%)
+    - Heart rate range (formatted as MIN_HR-MAX_HR bpm, appropriate for this condition)
+    - Blood pressure range (formatted as MIN_SYSTOLIC-MAX_SYSTOLIC/MIN_DIASTOLIC-MAX_DIASTOLIC mmHg, appropriate for this condition)
+    - Respiratory rate range (formatetd as MIN_RR-MAX_RR breaths/min, appropriate for this condition)
+    - Temperature range (formatted as MIN_TEMP-MAX_TEMP °C, appropriate for this condition)
+    - Oxygen saturation range (formatted as MIN_SPO2-MAX_SPO2%, appropriate for this condition)
 
-    IMPORTANT: Include a "Pain" field directly in the vitals object with a value like "6/10" representing the patient's self-reported pain level.
+    IMPORTANT: Include a "Pain" field directly in the vitals object with a value on a scale of 0-10 representing the patient's self-reported pain level for this condition.
 
     IMPORTANT: Include a "pain_description" field in the main case object with details about the character, location, and pattern of pain relevant to this specialty condition.
 
     IMPORTANT: Include a "recommended_physical_exams" field with an array of specific physical examinations that are indicated for this case. 
     For each examination, provide:
-    - Name of the examination (e.g., specific type of assessment relevant to the specialty)
+    - Name of the examination (specific type of assessment relevant to the specialty)
     - Clinical significance (why this exam is important for this case)
     - Expected findings (what a clinician would likely observe in this patient)
 
