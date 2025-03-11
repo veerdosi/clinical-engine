@@ -1,11 +1,9 @@
 import json
-import re
 import logging
 import aiohttp
 import asyncio
 from datetime import datetime
 from typing import Dict, List, Any, Optional
-from openai import Client  # Using the new client-based interface
 from backend.config import MedicalSimConfig
 from backend.case_generator import CaseParameters, CaseGenerator
 
@@ -39,16 +37,46 @@ class PerplexityClient:
         """
         endpoint = f"{self.base_url}/chat/completions"
         payload = {
-            "model": "sonar",  # Using a supported model with web search capability
+            "model": "sonar",  # Using a supported model with web search
             "messages": [
                 {
                     "role": "system",
                     "content": (
-                        "You are a medical research assistant that retrieves detailed, accurate medical information. "
-                        "When providing information, include specific details about symptoms, presentations, vital signs, "
-                        "physical examination findings, lab values, and diagnostic criteria. "
-                        "Always cite authoritative medical sources like guidelines, textbooks, or journal articles. "
-                        "Format information in clear sections with headings for easy parsing."
+                        "You are a medical case generator assistant. Your task is to create a realistic medical case based on the specialty and difficulty provided."
+                        "Search for medical information and return a JSON object with the precise structure defined below."
+                        "\n\nEXTREMELY IMPORTANT: Respond ONLY with a valid JSON object and nothing else. Do NOT include any text before or after the JSON."
+                        "Do NOT use markdown formatting, explanations, or other text. The response must start with '{' and end with '}'."
+                        "The response must be parseable by JSON.parse() with no modifications needed."
+                        "\n\nJSON structure:\n"
+                        "{\n"
+                        "  \"name\": \"string (realistic patient name)\",\n"
+                        "  \"age\": number (appropriate for the condition),\n"
+                        "  \"gender\": \"string (Male or Female)\",\n"
+                        "  \"diagnosis\": \"string (medical diagnosis based on your search)\",\n"
+                        "  \"presenting_complaint\": \"string (brief statement of chief complaint)\",\n"
+                        "  \"symptoms\": [\"array\", \"of\", \"symptom\", \"strings\"],\n"
+                        "  \"vitals\": {\n"
+                        "    \"BP\": \"string (e.g., 120/80 mmHg)\",\n"
+                        "    \"HR\": \"string (e.g., 72 bpm)\",\n"
+                        "    \"RR\": \"string (e.g., 16 breaths/min)\",\n"
+                        "    \"Temp\": \"string (e.g., 37.0 °C or 98.6 °F)\",\n"
+                        "    \"SpO2\": \"string (e.g., 98%)\"\n"
+                        "  },\n"
+                        "  \"vitals_range\": {\n"
+                        "    \"BP_systolic\": { \"min\": number, \"max\": number },\n"
+                        "    \"BP_diastolic\": { \"min\": number, \"max\": number },\n"
+                        "    \"HR\": { \"min\": number, \"max\": number },\n"
+                        "    \"RR\": { \"min\": number, \"max\": number },\n"
+                        "    \"Temp\": { \"min\": number, \"max\": number },\n"
+                        "    \"SpO2\": { \"min\": number, \"max\": number }\n"
+                        "  },\n"
+                        "  \"past_medical_conditions\": [\"array\", \"of\", \"condition\", \"strings\"],\n"
+                        "  \"medication_allergies\": [\"array\", \"of\", \"allergy\", \"strings\"],\n"
+                        "  \"negative_findings\": [\"array\", \"of\", \"string\"],\n"
+                        "  \"critical_tests\": [\"array\", \"of\", \"necessary\", \"test\", \"strings\"],\n"
+                        "  \"key_findings\": [\"array\", \"of\", \"important\", \"clinical\", \"findings\"],\n"
+                        "  \"sources\": [\"array\", \"of\", \"medical\", \"sources\", \"referenced\"]\n"
+                        "}"
                     )
                 },
                 {
@@ -59,7 +87,8 @@ class PerplexityClient:
             "options": {
                 "search_focus": "internet"
             },
-            "max_tokens": max_tokens
+            "max_tokens": max_tokens,
+            "temperature": 0.5  # Use higher temperature for more variety in cases
         }
         
         logger.debug(f"Perplexity API request payload: {json.dumps(payload)}")
@@ -82,22 +111,36 @@ class PerplexityClient:
                     result = json.loads(response_text)
                     
                     # Extract the content from Perplexity's response
-                    perplexity_content = ""
-                    if "choices" in result:
-                        for choice in result["choices"]:
-                            msg = choice.get("message", {})
-                            perplexity_content += msg.get("content", "")
-                    
-                    logger.info("Successfully retrieved information from Perplexity")
-                    
-                    return {
-                        "raw_content": perplexity_content,
-                        "result_found": bool(perplexity_content.strip()),
-                        "query": query
-                    }
+                    if "choices" in result and len(result["choices"]) > 0:
+                        content = result["choices"][0]["message"]["content"]
+                        logger.info("Successfully retrieved information from Perplexity")
+                        logger.debug(f"Raw content: {content[:500]}...")
+                        
+                        try:
+                            # Find JSON in the response if there's any text surrounding it
+                            json_start = content.find('{')
+                            json_end = content.rfind('}') + 1
+                            
+                            if json_start >= 0 and json_end > json_start:
+                                json_content = content[json_start:json_end]
+                                logger.debug(f"Extracted JSON: {json_content[:500]}...")
+                                case_data = json.loads(json_content)
+                                return case_data
+                            else:
+                                # If no JSON found, log the full content and return error
+                                logger.error(f"No valid JSON found in response. Content: {content}")
+                                return {"error": "No valid JSON found in response"}
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Error parsing JSON from Perplexity: {str(e)}")
+                            logger.debug(f"Raw content: {content}")
+                            return {"error": f"Invalid JSON in response: {str(e)}"}
+                    else:
+                        logger.error("No content in Perplexity response")
+                        return {"error": "No content in Perplexity response"}
         except Exception as e:
-            logger.error(f"Error in Perplexity search: {str(e)}")
-            return {"error": str(e)}
+            error_details = str(e)
+            logger.error(f"Error in Perplexity search: {error_details}")
+            return {"error": f"Perplexity API error: {error_details}"}
             
     def search(self, query: str, max_tokens: int = 4096) -> Dict[str, Any]:
         """
@@ -120,14 +163,15 @@ class PerplexityClient:
         try:
             return loop.run_until_complete(self.search_async(query, max_tokens))
         except Exception as e:
-            logger.error(f"Error in synchronous Perplexity search: {str(e)}")
-            return {"error": str(e)}
+            error_details = str(e)
+            logger.error(f"Error in synchronous Perplexity search: {error_details}")
+            return {"error": f"Perplexity API error: {error_details}"}
 
 
 class EnhancedCaseGenerator(CaseGenerator):
     """
     Enhanced version of CaseGenerator that uses Perplexity AI to gather medically
-    accurate information before using OpenAI to structure the final case.
+    accurate information and return a structured JSON case directly.
     """
     def __init__(self, config: MedicalSimConfig):
         super().__init__(config)
@@ -143,6 +187,10 @@ class EnhancedCaseGenerator(CaseGenerator):
         Returns:
             A query string to send to Perplexity
         """
+        # Add a timestamp to ensure uniqueness in each query
+        import time
+        timestamp = time.time()
+        seed = int(timestamp % 10000)  # Create a seed from current timestamp
         difficulty_descriptions = {
             "easy": "common condition with typical presentation",
             "moderate": "condition with atypical presentation or comorbidities",
@@ -151,326 +199,176 @@ class EnhancedCaseGenerator(CaseGenerator):
         
         difficulty_desc = difficulty_descriptions.get(params.difficulty, "condition")
         
-        # Create a specialized prompt based on specialty
+        # Create a specialized prompt based on specialty, adding the seed for randomness
         if params.specialty == "Cardiology":
             query = f"""
-I need detailed medical information for creating a realistic cardiac patient case for medical education. 
+Generate a realistic cardiac patient case for medical education. 
 The case should be of {params.difficulty} difficulty ({difficulty_desc}).
+Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
 
-Please provide information about a {difficulty_desc} in the field of cardiology.
+Create a {difficulty_desc} in the field of cardiology. The case should include appropriate:
+- Diagnosis (a specific cardiac condition)
+- Key cardiac symptoms (with appropriate character, location, duration)
+- Vital signs with realistic RANGES for this condition (not just single values)
+- Pertinent physical examination findings
+- Relevant past medical history and risk factors
+- Critical cardiac tests and expected findings
+- Demographics appropriate for this condition
 
-Specifically, include:
-1. The specific cardiac diagnosis
-2. 3-5 key cardiac and associated symptoms (including character, location, duration, precipitating/alleviating factors)
-3. Expected vital signs (HR, BP, RR, O2 sat, temperature)
-4. Pertinent physical examination findings (heart sounds, murmurs, lung sounds, edema, etc.)
-5. Relevant past medical history and risk factors
-6. Key ECG findings
-7. Important cardiac biomarkers and their expected values
-8. Expected findings on echocardiogram or other cardiac imaging
-9. 1-2 red herring symptoms that might confuse diagnosis
-10. Demographics where this condition is commonly found (age range, gender predisposition if any)
+IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
+- Heart rate range (min and max values during monitoring, e.g., 80-110 bpm for tachycardia)
+- Blood pressure range (systolic and diastolic min/max values, e.g., 150-180/90-100 mmHg for hypertension)
+- Respiratory rate range (e.g., 18-24 breaths/min)
+- Temperature range (e.g., 36.8-37.2 °C)
+- Oxygen saturation range (e.g., 88-94% for hypoxemia)
 
-Please cite cardiology guidelines or literature.
-Format your response in a clear, structured manner that separates each category of information.
+Using these ranges will enable dynamic visualization of the patient's status over time.
+
+Base your case on evidence-based medical information and include citations from cardiology literature.
+Return ONLY a valid JSON object as specified, nothing else.
 """
         elif params.specialty == "Neurology":
             query = f"""
-I need detailed medical information for creating a realistic neurology patient case for medical education. 
+Generate a realistic neurology patient case for medical education. 
 The case should be of {params.difficulty} difficulty ({difficulty_desc}).
+Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
 
-Please provide information about a {difficulty_desc} in the field of neurology.
+Create a {difficulty_desc} in the field of neurology. The case should include appropriate:
+- Specific neurological diagnosis
+- Key neurological symptoms and their progression
+- Vital signs with realistic RANGES for this condition (not just single values)
+- Neurological examination findings
+- Relevant past medical history and risk factors
+- Critical neurological tests (imaging, CSF analysis if relevant)
+- Demographics appropriate for this condition
 
-Specifically, include:
-1. The specific neurological diagnosis
-2. 3-5 key neurological symptoms (including onset, progression, character, location)
-3. Expected vital signs
-4. Pertinent neurological examination findings (mental status, cranial nerves, motor/sensory function, reflexes, coordination, gait)
-5. Relevant past medical history and risk factors
-6. Key findings on neuroimaging (CT, MRI)
-7. Important lab values if relevant (CSF analysis, etc.)
-8. 1-2 red herring symptoms that might confuse diagnosis
-9. Demographics where this condition is commonly found (age range, gender predisposition if any)
+IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
+- Heart rate range (min and max values during monitoring, e.g., 60-100 bpm)
+- Blood pressure range (systolic and diastolic min/max values, e.g., 110-140/60-90 mmHg)
+- Respiratory rate range (e.g., 12-20 breaths/min)
+- Temperature range (e.g., 36.5-37.5 °C)
+- Oxygen saturation range (e.g., 95-100%)
 
-Please cite neurology guidelines or literature.
-Format your response in a clear, structured manner that separates each category of information.
+Using these ranges will enable dynamic visualization of the patient's status over time.
+
+Base your case on evidence-based medical information and include citations from neurology literature.
+Return ONLY a valid JSON object as specified, nothing else.
 """
         elif params.specialty == "Pulmonology":
             query = f"""
-I need detailed medical information for creating a realistic pulmonology patient case for medical education. 
+Generate a realistic pulmonology patient case for medical education. 
 The case should be of {params.difficulty} difficulty ({difficulty_desc}).
+Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
 
-Please provide information about a {difficulty_desc} in the field of pulmonology.
+Create a {difficulty_desc} in the field of pulmonology. The case should include appropriate:
+- Specific pulmonary diagnosis
+- Key respiratory symptoms
+- Vital signs with realistic RANGES for this condition (not just single values)
+- Pertinent respiratory examination findings
+- Relevant past medical history and risk factors (include smoking history if relevant)
+- Critical pulmonary tests (PFTs, imaging, ABGs if relevant)
+- Demographics appropriate for this condition
 
-Specifically, include:
-1. The specific pulmonary diagnosis
-2. 3-5 key respiratory symptoms (including character of cough, sputum, dyspnea, chest pain)
-3. Expected vital signs with emphasis on respiratory rate and oxygen saturation
-4. Pertinent physical examination findings (respiratory inspection, palpation, percussion, auscultation)
-5. Relevant past medical history and risk factors (smoking history, occupational exposures)
-6. Key findings on chest X-ray or CT
-7. Important pulmonary function test results
-8. Arterial blood gas values if relevant
-9. 1-2 red herring symptoms that might confuse diagnosis
-10. Demographics where this condition is commonly found (age range, gender predisposition if any)
+IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
+- Heart rate range (min and max values during monitoring, e.g., 90-120 bpm for respiratory distress)
+- Blood pressure range (systolic and diastolic min/max values, e.g., 110-140/60-90 mmHg)
+- Respiratory rate range (e.g., 22-32 breaths/min for respiratory conditions)
+- Temperature range (e.g., 36.5-38.5 °C depending on infection status)
+- Oxygen saturation range (e.g., 85-92% for COPD exacerbation)
 
-Please cite pulmonology guidelines or literature.
-Format your response in a clear, structured manner that separates each category of information.
+Using these ranges will enable dynamic visualization of the patient's status over time.
+
+Base your case on evidence-based medical information and include citations from pulmonology literature.
+Return ONLY a valid JSON object as specified, nothing else.
 """
         elif params.specialty == "Emergency Medicine":
             query = f"""
-I need detailed medical information for creating a realistic emergency medicine patient case for medical education.
+Generate a realistic emergency medicine patient case for medical education.
 The case should be of {params.difficulty} difficulty ({difficulty_desc}).
+Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
 
-Please provide information about a {difficulty_desc} commonly seen in emergency departments.
+Create a {difficulty_desc} commonly seen in emergency departments. The case should include appropriate:
+- Specific emergency diagnosis
+- Key symptoms with appropriate time course and severity
+- Vital signs with realistic RANGES for this condition (not just single values)
+- Pertinent physical examination findings
+- Relevant past medical history and risk factors
+- Critical emergency tests and studies
+- Demographics appropriate for this condition
 
-Specifically, include:
-1. The specific emergency diagnosis
-2. 3-5 key symptoms and their presentation (onset, progression, severity)
-3. Expected vital signs (HR, BP, RR, O2 sat, temperature) and how they might change during the emergency
-4. Pertinent physical examination findings
-5. Relevant past medical history and risk factors
-6. Key laboratory findings and point-of-care test results
-7. Important imaging findings if applicable
-8. Expected clinical course and time-sensitive aspects of management
-9. 1-2 red herring symptoms or findings that might confuse diagnosis
-10. Demographics where this condition is commonly found (age range, gender predisposition if any)
+IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
+- Heart rate range (min and max values during monitoring, e.g., 110-140 bpm for shock)
+- Blood pressure range (systolic and diastolic min/max values, e.g., 80-100/40-60 mmHg for hypotension) 
+- Respiratory rate range (e.g., 24-36 breaths/min for respiratory distress)
+- Temperature range (e.g., 38.5-40.2 °C for fever or 35-35.5 °C for hypothermia)
+- Oxygen saturation range (e.g., 82-92% for hypoxemia)
 
-Please cite emergency medicine guidelines or literature.
-Format your response in a clear, structured manner that separates each category of information.
+Using these ranges will enable dynamic visualization of the patient's status over time.
+
+Base your case on evidence-based medical information and include citations from emergency medicine literature.
+Return ONLY a valid JSON object as specified, nothing else.
 """
         elif params.specialty == "Internal Medicine":
             query = f"""
-I need detailed medical information for creating a realistic internal medicine patient case for medical education.
+Generate a realistic internal medicine patient case for medical education.
 The case should be of {params.difficulty} difficulty ({difficulty_desc}).
+Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
 
-Please provide information about a {difficulty_desc} in general internal medicine.
+Create a {difficulty_desc} in general internal medicine. The case should include appropriate:
+- Specific medical diagnosis
+- Key symptoms with appropriate characteristics
+- Vital signs with realistic RANGES for this condition (not just single values)
+- Pertinent physical examination findings across body systems
+- Relevant past medical history, medications, and risk factors 
+- Critical laboratory and diagnostic tests
+- Demographics appropriate for this condition
 
-Specifically, include:
-1. The specific medical diagnosis
-2. 3-5 key symptoms and their presentation (character, duration, exacerbating/alleviating factors)
-3. Expected vital signs
-4. Pertinent physical examination findings across relevant body systems
-5. Relevant past medical history, medications, and risk factors
-6. Key laboratory findings and their expected values
-7. Important imaging or diagnostic test findings if applicable
-8. Differential diagnoses that should be considered
-9. 1-2 red herring symptoms or findings that might confuse diagnosis
-10. Demographics where this condition is commonly found (age range, gender predisposition if any)
+IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
+- Heart rate range (min and max values during monitoring, e.g., 70-110 bpm)
+- Blood pressure range (systolic and diastolic min/max values, e.g., 110-160/70-95 mmHg)
+- Respiratory rate range (e.g., 14-24 breaths/min)
+- Temperature range (e.g., 36.8-38.2 °C)
+- Oxygen saturation range (e.g., 90-98%)
 
-Please cite internal medicine guidelines or literature.
-Format your response in a clear, structured manner that separates each category of information.
+Using these ranges will enable dynamic visualization of the patient's status over time.
+
+Base your case on evidence-based medical information and include citations from medical literature.
+Return ONLY a valid JSON object as specified, nothing else.
 """
         else:
             # Generic query for other specialties
             query = f"""
-I need detailed medical information for creating a realistic patient case for medical education in {params.specialty}. 
+Generate a realistic patient case for medical education in {params.specialty}. 
 The case should be of {params.difficulty} difficulty ({difficulty_desc}).
+Use randomization seed: {seed} (This is to ensure a unique case is generated each time).
 
-Please provide:
+Create a {difficulty_desc} in the {params.specialty} field. The case should include appropriate:
+- Specific diagnosis within this specialty
+- Key symptoms and their presentation 
+- Vital signs with realistic RANGES for this condition (not just single values)
+- Pertinent physical examination findings
+- Relevant past medical history and risk factors
+- Critical tests and expected findings
+- Demographics appropriate for this condition
 
-1. A {difficulty_desc} presentation of a condition in {params.specialty} field, including:
-   - The specific condition/diagnosis
-   - 3-5 key symptoms and their typical presentation in patients
-   - Typical vital sign abnormalities for this condition
-   - Key physical examination findings
-   - 2-3 relevant comorbidities or past medical history that might accompany this condition
-   - Any medication allergies that would be relevant to treatment
-   - Important negative findings (symptoms typically asked about but not present in this condition)
+IMPORTANT: For vital signs, provide realistic ranges that would be seen in this condition:
+- Heart rate range (min and max values during monitoring, e.g., 60-110 bpm)
+- Blood pressure range (systolic and diastolic min/max values, e.g., 110-150/60-90 mmHg)
+- Respiratory rate range (e.g., 14-24 breaths/min)
+- Temperature range (e.g., 36.5-38.0 °C)
+- Oxygen saturation range (e.g., 92-99%)
 
-2. Realistic lab values and imaging findings that would be expected
+Using these ranges will enable dynamic visualization of the patient's status over time.
 
-3. Demographics where this condition is commonly found (age range, gender predisposition if any)
-
-Please cite reputable medical sources or guidelines in your response.
-Format your response in a clear, structured manner that separates each category of information.
+Base your case on evidence-based medical information and include citations from relevant medical literature.
+Return ONLY a valid JSON object as specified, nothing else.
 """
         
         return query
     
-    def _parse_perplexity_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Parse the response from Perplexity AI.
-        
-        Args:
-            response: The Perplexity API response
-            
-        Returns:
-            Dict containing extracted medical information
-        """
-        extracted_info = {}
-        
-        try:
-            if "error" in response:
-                logger.error(f"Error in Perplexity response: {response['error']}")
-                return {"error": response["error"]}
-                
-            content = response.get("raw_content", "")
-            if not content:
-                logger.error("No content in Perplexity response")
-                return {"error": "No content in Perplexity response"}
-            
-            # Extract diagnosis
-            diagnosis_match = re.search(r"(?:diagnosis|condition):\s*(.*?)(?:\n|$)", content, re.IGNORECASE)
-            if diagnosis_match:
-                extracted_info["diagnosis"] = diagnosis_match.group(1).strip()
-            
-            # Extract symptoms
-            symptoms = []
-            symptoms_section = re.search(r"(?:symptoms|key symptoms):(.*?)(?:\n\d|\n[A-Z])", content, re.IGNORECASE | re.DOTALL)
-            if symptoms_section:
-                symptom_text = symptoms_section.group(1)
-                # Look for bullet points or numbered symptoms
-                symptom_matches = re.findall(r"(?:^|\n)(?:\d+\.|\*|\-)\s*(.*?)(?:\n|$)", symptom_text)
-                if symptom_matches:
-                    symptoms.extend([s.strip() for s in symptom_matches if s.strip()])
-                else:
-                    # If no bullets found, try to split on commas or newlines
-                    symptom_parts = re.split(r",|\n", symptom_text)
-                    symptoms.extend([s.strip() for s in symptom_parts if s.strip()])
-            
-            extracted_info["symptoms"] = symptoms
-            
-            # Extract vital signs
-            vitals = {}
-            vitals_section = re.search(r"(?:vital signs|vitals):(.*?)(?:\n\d|\n[A-Z])", content, re.IGNORECASE | re.DOTALL)
-            if vitals_section:
-                vitals_text = vitals_section.group(1)
-                
-                # Extract BP
-                bp_match = re.search(r"(?:BP|blood pressure):\s*(\d+/\d+)(?:\s*mmHg)?", vitals_text, re.IGNORECASE)
-                if bp_match:
-                    vitals["BP"] = f"{bp_match.group(1)} mmHg"
-                
-                # Extract HR
-                hr_match = re.search(r"(?:HR|heart rate|pulse):\s*(\d+)(?:\s*bpm)?", vitals_text, re.IGNORECASE)
-                if hr_match:
-                    vitals["HR"] = f"{hr_match.group(1)} bpm"
-                
-                # Extract RR
-                rr_match = re.search(r"(?:RR|respiratory rate):\s*(\d+)(?:\s*breaths/min)?", vitals_text, re.IGNORECASE)
-                if rr_match:
-                    vitals["RR"] = f"{rr_match.group(1)} breaths/min"
-                
-                # Extract Temp
-                temp_match = re.search(r"(?:temperature|temp):\s*([\d\.]+)(?:\s*[°C|°F])?", vitals_text, re.IGNORECASE)
-                if temp_match:
-                    # Assume Celsius if not specified
-                    vitals["Temp"] = f"{temp_match.group(1)} °C"
-                
-                # Extract SpO2
-                spo2_match = re.search(r"(?:SpO2|O2 sat|oxygen saturation):\s*(\d+)(?:\s*%)?", vitals_text, re.IGNORECASE)
-                if spo2_match:
-                    vitals["SpO2"] = f"{spo2_match.group(1)}%"
-            
-            extracted_info["vitals"] = vitals
-            
-            # Extract demographics
-            demo_section = re.search(r"(?:demographics|patient profile):(.*?)(?:\n\d|\n[A-Z])", content, re.IGNORECASE | re.DOTALL)
-            demographics = {}
-            
-            if demo_section:
-                demo_text = demo_section.group(1)
-                
-                # Extract age
-                age_match = re.search(r"(?:age|aged):\s*(\d+)(?:\s*years)?", demo_text, re.IGNORECASE)
-                if age_match:
-                    demographics["age"] = age_match.group(1)
-                else:
-                    # Try to find age range and pick a value
-                    age_range_match = re.search(r"(\d+)\s*(?:to|-)\s*(\d+)(?:\s*years)?", demo_text, re.IGNORECASE)
-                    if age_range_match:
-                        min_age = int(age_range_match.group(1))
-                        max_age = int(age_range_match.group(2))
-                        import random
-                        demographics["age"] = str(random.randint(min_age, max_age))
-                
-                # Extract gender
-                gender_match = re.search(r"(?:gender|sex):\s*(male|female)", demo_text, re.IGNORECASE)
-                if gender_match:
-                    demographics["gender"] = gender_match.group(1).capitalize()
-            
-            extracted_info["demographics"] = demographics
-            
-            # Extract past medical history/comorbidities
-            pmh = []
-            pmh_section = re.search(r"(?:past medical history|comorbidities):(.*?)(?:\n\d|\n[A-Z])", content, re.IGNORECASE | re.DOTALL)
-            if pmh_section:
-                pmh_text = pmh_section.group(1)
-                # Look for bullet points or numbered items
-                pmh_matches = re.findall(r"(?:^|\n)(?:\d+\.|\*|\-)\s*(.*?)(?:\n|$)", pmh_text)
-                if pmh_matches:
-                    pmh.extend([p.strip() for p in pmh_matches if p.strip()])
-                else:
-                    # If no bullets found, try to split on commas or newlines
-                    pmh_parts = re.split(r",|\n", pmh_text)
-                    pmh.extend([p.strip() for p in pmh_parts if p.strip()])
-            
-            extracted_info["past_medical_conditions"] = pmh
-            
-            # Extract physical exam findings
-            exam_findings = {}
-            exam_section = re.search(r"(?:physical examination|examination findings):(.*?)(?:\n\d|\n[A-Z])", content, re.IGNORECASE | re.DOTALL)
-            if exam_section:
-                exam_text = exam_section.group(1)
-                # Check for common exam systems
-                systems = ["cardiovascular", "respiratory", "neurological", "abdominal", "musculoskeletal", "heent"]
-                for system in systems:
-                    system_match = re.search(f"{system}[^\n]*:(.*?)(?:\n(?:[A-Za-z]+[^\n]*:|\d)|\Z)", exam_text, re.IGNORECASE | re.DOTALL)
-                    if system_match:
-                        exam_findings[system] = system_match.group(1).strip()
-            
-            extracted_info["examination_findings"] = exam_findings
-            
-            # Extract lab/imaging findings for critical tests
-            critical_tests = []
-            tests_section = re.search(r"(?:lab values|lab tests|laboratory findings|imaging findings):(.*?)(?:\n\d|\n[A-Z])", content, re.IGNORECASE | re.DOTALL)
-            if tests_section:
-                tests_text = tests_section.group(1)
-                
-                # Look for common test types
-                test_patterns = [
-                    r"(?:CBC|complete blood count)",
-                    r"(?:CMP|comprehensive metabolic panel)",
-                    r"(?:BMP|basic metabolic panel)",
-                    r"(?:Troponin|cardiac enzymes)",
-                    r"(?:ECG|EKG|electrocardiogram)",
-                    r"(?:CXR|chest x-ray)",
-                    r"(?:CT|computed tomography)",
-                    r"(?:MRI|magnetic resonance imaging)"
-                ]
-                
-                for pattern in test_patterns:
-                    if re.search(pattern, tests_text, re.IGNORECASE):
-                        test_name = re.search(pattern, tests_text, re.IGNORECASE).group(0)
-                        critical_tests.append(test_name)
-            
-            extracted_info["critical_tests"] = critical_tests
-            
-            # Extract citations/sources if available
-            citations = []
-            citations_match = re.findall(r"(?:references|sources|citations):(.*?)(?:\n\d|\n[A-Z]|\Z)", content, re.IGNORECASE | re.DOTALL)
-            if citations_match:
-                citations_text = citations_match[0]
-                citation_lines = re.findall(r"(?:^|\n)(?:\d+\.|\*|\-)\s*(.*?)(?:\n|$)", citations_text)
-                if citation_lines:
-                    citations.extend([c.strip() for c in citation_lines if c.strip()])
-            
-            extracted_info["sources"] = citations
-
-            # Store the raw Perplexity content for reference
-            extracted_info["raw_perplexity_content"] = content
-            
-        except Exception as e:
-            logger.error(f"Error parsing Perplexity response: {str(e)}")
-            logger.debug(f"Response content: {response}")
-            return {"error": f"Error parsing response: {str(e)}"}
-        
-        return extracted_info
-    
     def generate_case(self, params: CaseParameters) -> Dict:
         """
-        Generates a case using Perplexity AI for medical information and GPT for formatting.
+        Generates a case using Perplexity AI for medical information in JSON format.
         
         Args:
             params: Parameters for case generation
@@ -478,155 +376,90 @@ Format your response in a clear, structured manner that separates each category 
         Returns:
             Dict representing the generated case
         """
+        # Add variation by supporting a list of conditions to avoid
+        # This can be passed in to ensure we don't get repeat diagnoses
+        avoid_conditions = getattr(params, 'avoid_conditions', [])
         try:
             logger.info(f"Generating {params.difficulty} case for {params.specialty}")
             
-            # Step 1: Generate query for Perplexity based on parameters
+            # Verify API key is set
+            if not self.perplexity_client.api_key:
+                logger.error("Perplexity API key not set")
+                return super().generate_case(params)
+                
+                            # Generate query for Perplexity based on parameters
             perplexity_query = self._generate_perplexity_query(params)
+            
+            # If we have conditions to avoid, add them to the query
+            if avoid_conditions:
+                avoid_str = ", ".join(avoid_conditions)
+                perplexity_query += f"\n\nIMPORTANT: Do NOT generate any of these diagnoses: {avoid_str}"
+                
             logger.info("Querying Perplexity AI for medical information")
             
-            # Step 2: Get information from Perplexity
-            perplexity_response = self.perplexity_client.search(perplexity_query)
-            
-            # Step 3: Parse the Perplexity response to extract structured medical info
-            medical_info = self._parse_perplexity_response(perplexity_response)
+            # Get information from Perplexity in JSON format
+            case_data = self.perplexity_client.search(perplexity_query)
             
             # If there was an error in the Perplexity response, log and fall back to original generator
-            if "error" in medical_info:
-                logger.error(f"Error from Perplexity: {medical_info['error']}")
+            if "error" in case_data:
+                logger.error(f"Error from Perplexity: {case_data['error']}")
                 logger.info("Falling back to original case generator")
                 return super().generate_case(params)
-                
-            logger.info(f"Extracted medical information for: {medical_info.get('diagnosis', 'Unknown diagnosis')}")
             
-            # Step 4: Use OpenAI to structure the final case based on Perplexity data
-            medical_info_json = json.dumps(medical_info, indent=2)
-            system_prompt = f"""You are a medical case generator. Create a {params.difficulty} {params.specialty} case based on the provided medical information.
-
-Format the case as a JSON object with these fields:
-- name: Generate a realistic patient name
-- age: Use the provided age or generate appropriate age if not provided
-- gender: Use the provided gender or generate appropriate gender if not provided
-- diagnosis: Use the exact diagnosis provided
-- presenting_complaint: A brief statement of why the patient is seeking care
-- symptoms: An array of symptoms reported by the patient
-- vitals: Object with BP, HR, RR, Temp, SpO2
-- past_medical_conditions: Array of previous conditions
-- medication_allergies: Array of medication allergies (can be generated if not provided)
-- negative_findings: Array of important negative findings
-- critical_tests: Array of tests that should be ordered to diagnose this condition
-- key_findings: Array of the most important symptoms/signs for diagnosis
-
-The JSON must be properly formatted with no trailing commas. Format all string values with proper quotes, especially values like "110 bpm" or "22 breaths/min".
-"""
+            # Add required specialty and difficulty to the case
+            case_data["specialty"] = params.specialty
+            case_data["difficulty"] = params.difficulty
             
-            try:
-                logger.info("Sending structured medical info to OpenAI for case formatting")
-                response = self.client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": f"Create a detailed case based on this medical information: {medical_info_json}"}
-                    ],
-                    temperature=0.5 if params.difficulty == "hard" else 0.3,
-                    response_format={"type": "json_object"}
-                )
-
-                content = response.choices[0].message.content.strip()
+            # Add some standard expected fields if missing
+            if "id" not in case_data:
+                case_data["id"] = f"case_{datetime.now().strftime('%Y%m%d%H%M%S')}"
                 
-                # Clean up the response
-                content = self._clean_json_response(content)
+            if "created_at" not in case_data:
+                case_data["created_at"] = datetime.now().isoformat()
                 
-                try:
-                    case = json.loads(content)
-                except json.JSONDecodeError as e:
-                    # If still failing, make one more attempt with a more aggressive cleanup
-                    content = re.sub(r'([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', content)
-                    try:
-                        case = json.loads(content)
-                    except json.JSONDecodeError:
-                        raise ValueError(f"Failed to parse JSON response: {content}")
+            # Set the expected_diagnosis field for compatibility
+            if "diagnosis" in case_data and "expected_diagnosis" not in case_data:
+                case_data["expected_diagnosis"] = case_data["diagnosis"]
                 
-                # Add specialty and difficulty to the case
-                case["specialty"] = params.specialty
-                case["difficulty"] = params.difficulty
+            # Update vitals format for compatibility with original format
+            if "vitals_range" in case_data:
+                case_data["vital_signs"] = case_data.get("vitals", {})
                 
-                # Add information about the sources if available
-                if "sources" in medical_info and medical_info["sources"]:
-                    case["medical_sources"] = medical_info["sources"]
+            # Make sure vital signs are properly formatted
+            if "vitals" in case_data:
+                vitals = case_data["vitals"]
                 
-                return case
+                # Ensure BP has mmHg
+                if "BP" in vitals and "mmHg" not in vitals["BP"]:
+                    vitals["BP"] = f"{vitals['BP']} mmHg"
                 
-            except Exception as e:
-                logger.error(f"Error in OpenAI case formatting: {str(e)}")
+                # Ensure HR has bpm
+                if "HR" in vitals and "bpm" not in vitals["HR"]:
+                    vitals["HR"] = f"{vitals['HR']} bpm"
                 
-                # Fallback to the original case generator if OpenAI formatting fails
-                logger.info("Falling back to original case generator")
-                return super().generate_case(params)
+                # Ensure RR has breaths/min
+                if "RR" in vitals and "breaths" not in vitals["RR"]:
+                    vitals["RR"] = f"{vitals['RR']} breaths/min"
+                
+                # Ensure Temp has °C or °F
+                if "Temp" in vitals and "°" not in vitals["Temp"]:
+                    # Assume Celsius if value is low, Fahrenheit if high
+                    temp_value = float(vitals["Temp"].replace("°C", "").replace("°F", "").strip())
+                    if temp_value < 50:  # Likely Celsius
+                        vitals["Temp"] = f"{temp_value} °C"
+                    else:  # Likely Fahrenheit
+                        vitals["Temp"] = f"{temp_value} °F"
+                
+                # Ensure SpO2 has %
+                if "SpO2" in vitals and "%" not in vitals["SpO2"]:
+                    vitals["SpO2"] = f"{vitals['SpO2']}%"
+            
+            logger.info(f"Successfully generated case: {case_data.get('diagnosis', 'Unknown diagnosis')}")
+            return case_data
                 
         except Exception as e:
             logger.error(f"Error in enhanced case generation: {str(e)}")
             
             # Fallback to the original case generator if Perplexity fails
-            logger.info("Falling back to original case generator due to Perplexity error")
+            logger.info("Falling back to original case generator due to error")
             return super().generate_case(params)
-
-
-# Update the MedicalSimConfig class to include Perplexity API key
-def update_config_class():
-    """
-    Updates the MedicalSimConfig class definition to include Perplexity API key.
-    This is a patch that should be applied to config.py.
-    """
-    config_update = """
-class MedicalSimConfig:
-    def __init__(self,
-                 openai_key: str = None,
-                 elevenlabs_key: str = None,
-                 replicate_key: str = None,
-                 perplexity_key: str = None,
-                 default_voice_id: str = "EXAVITQu4vr4xnSDxMaL",
-                 voice_settings: dict = None):
-        \"\"\"
-        Initialize medical simulation configuration.
-        \"\"\"
-        # Validate and set OpenAI API key
-        self.openai_api_key = openai_key or os.getenv("OPENAI_API_KEY")
-        if not self.openai_api_key:
-            raise ValueError("OpenAI API key is required")
-        openai.api_key = self.openai_api_key
-
-        # Validate Eleven Labs API key
-        self.elevenlabs_key = elevenlabs_key or os.getenv("ELEVENLABS_API_KEY")
-        if not self.elevenlabs_key:
-            raise ValueError("Eleven Labs API key is required")
-        self.default_voice_id = default_voice_id
-        self.voice_settings = voice_settings or {
-            "stability": 0.5,
-            "similarity_boost": 0.8
-        }
-
-        # Validate Replicate API key
-        self.replicate_key = replicate_key or os.getenv("REPLICATE_API_KEY")
-        self._validate_replicate_key()
-        self._validate_elevenlabs_key()
-        
-        # Set Perplexity API key
-        self.perplexity_api_key = perplexity_key or os.getenv("PERPLEXITY_API_KEY")
-"""
-    
-    return config_update
-
-
-# Example usage
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
-    
-    # Example implementation
-    config = MedicalSimConfig()
-    generator = EnhancedCaseGenerator(config)
-    params = CaseParameters("Cardiology", "moderate")
-    case = generator.generate_case(params)
-    
-    print(json.dumps(case, indent=2))

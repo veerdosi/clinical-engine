@@ -5,9 +5,10 @@ from typing import Dict
 from backend.config import MedicalSimConfig
 
 class CaseParameters:
-    def __init__(self, specialty: str, difficulty: str):
+    def __init__(self, specialty: str, difficulty: str, avoid_conditions: list = None):
         self.specialty: str = specialty
         self.difficulty: str = difficulty
+        self.avoid_conditions: list = avoid_conditions or []
         self.complexity_map: dict[str, str] = {
             "easy": "common presentation with 1-2 classic symptoms",
             "moderate": "atypical presentation with comorbidities",

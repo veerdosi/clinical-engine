@@ -7,16 +7,17 @@ import os
 
 # Load environment variables
 load_dotenv()
-
-# Get API key
+    
+# Print API key info for debugging
 perplexity_api_key = os.getenv("PERPLEXITY_API_KEY")
 print(f"API key present: {bool(perplexity_api_key)}")
 print(f"API key length: {len(perplexity_api_key) if perplexity_api_key else 0}")
-
-# Test if the API key is the default value
-if perplexity_api_key == "your_perplexity_api_key_here":
-    print("WARNING: Using default API key value")
+    
+# Example implementation
+from backend.config import MedicalSimConfig
 config = MedicalSimConfig()
+config.perplexity_api_key = perplexity_api_key
+    
 generator = EnhancedCaseGenerator(config)
 params = CaseParameters("Cardiology", "moderate")
 case = generator.generate_case(params)

@@ -39,12 +39,25 @@ class CaseManager:
             selected_specialty = specialty if specialty and specialty.strip() else random.choice(self.specialties)
             selected_difficulty = difficulty if difficulty and difficulty.strip() else random.choice(self.difficulties)
             
-            params = CaseParameters(selected_specialty, selected_difficulty)
+            # Get list of previously generated diagnoses to avoid repetition
+            avoid_conditions = []
+            if hasattr(self, 'previous_diagnoses'):
+                avoid_conditions = self.previous_diagnoses[-5:] if len(self.previous_diagnoses) > 5 else self.previous_diagnoses
+            
+            params = CaseParameters(selected_specialty, selected_difficulty, avoid_conditions)
             case_gen = EnhancedCaseGenerator(self.config)
             case_dict = case_gen.generate_case(params)
 
             # Log the case for debugging
             logger.info(f"Generated case: {json.dumps(case_dict, indent = 2)}")
+            
+            # Store the diagnosis to avoid repetition in future cases
+            if not hasattr(self, 'previous_diagnoses'):
+                self.previous_diagnoses = []
+            if "diagnosis" in case_dict and case_dict["diagnosis"]:
+                self.previous_diagnoses.append(case_dict["diagnosis"])
+            elif "expected_diagnosis" in case_dict and case_dict["expected_diagnosis"]:
+                self.previous_diagnoses.append(case_dict["expected_diagnosis"])
             
             # Ensure diagnosis is present
             if "expected_diagnosis" not in case_dict or not case_dict["expected_diagnosis"]:
