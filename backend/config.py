@@ -12,9 +12,6 @@ class MedicalSimConfig:
                  openai_key: str = None,
                  elevenlabs_key: str = None,
                  replicate_key: str = None,
-                 synthea_path: str = None,
-                 synthea_db_path: str = "synthea_patients.db",
-                 enhance_with_gpt: bool = True,
                  default_voice_id: str = "EXAVITQu4vr4xnSDxMaL",
                  voice_settings: dict = None):
         """
@@ -40,10 +37,6 @@ class MedicalSimConfig:
         self.replicate_key = replicate_key or os.getenv("REPLICATE_API_KEY")
         self._validate_replicate_key()
         self._validate_elevenlabs_key()
-
-        self.synthea_path = synthea_path or os.getenv("SYNTHEA_PATH")
-        self.synthea_db_path = synthea_db_path or os.getenv("SYNTHEA_DB_PATH", "synthea_patients.db")
-        self.enhance_with_gpt = enhance_with_gpt
 
     def _validate_replicate_key(self):
         if not self.replicate_key:
