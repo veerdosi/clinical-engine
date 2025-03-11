@@ -5,6 +5,7 @@ from datetime import datetime
 from backend.case_generator import CaseParameters, CaseGenerator
 from backend.virtual_patient import VirtualPatientAgent
 from backend.evaluation import DiagnosisEvaluator
+from backend.enhanced_case_generator import EnhancedCaseGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ class CaseManager:
             selected_difficulty = difficulty if difficulty and difficulty.strip() else random.choice(self.difficulties)
             
             params = CaseParameters(selected_specialty, selected_difficulty)
-            case_gen = CaseGenerator(self.config)
+            case_gen = EnhancedCaseGenerator(self.config)
             case_dict = case_gen.generate_case(params)
 
             # Log the case for debugging

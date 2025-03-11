@@ -12,6 +12,7 @@ class MedicalSimConfig:
                  openai_key: str = None,
                  elevenlabs_key: str = None,
                  replicate_key: str = None,
+                 perplexity_key: str = None,
                  default_voice_id: str = "EXAVITQu4vr4xnSDxMaL",
                  voice_settings: dict = None):
         """
@@ -37,6 +38,7 @@ class MedicalSimConfig:
         self.replicate_key = replicate_key or os.getenv("REPLICATE_API_KEY")
         self._validate_replicate_key()
         self._validate_elevenlabs_key()
+        self.perplexity_api_key = perplexity_key or os.getenv("PERPLEXITY_API_KEY")
 
     def _validate_replicate_key(self):
         if not self.replicate_key:
