@@ -113,6 +113,137 @@ Return a JSON object with these fields:
                 "feedback": f"An error occurred during evaluation. Please try again."
             }
 
+class NotesEvaluator:
+    """
+    Evaluates the quality of student-created SOAP notes, focusing on structure,
+    completeness, accuracy, and medical terminology.
+    """
+    def __init__(self, config):
+        self.config = config
+        self.client = Client(api_key=config.openai_api_key)
+    
+    def evaluate_notes(self, notes: Dict[str, str], case_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Evaluates SOAP notes created by a student.
+        
+        Args:
+            notes: Dictionary containing SOAP notes (subjective, objective, assessment, plan)
+            case_info: Information about the current case for context
+            
+        Returns:
+            Dict containing evaluation results for the notes
+        """
+        if not notes or not any(notes.values()):
+            return {
+                "completeness_score": 0,
+                "organization_score": 0,
+                "accuracy_score": 0,
+                "terminology_score": 0,
+                "assessment_plan_score": 0,
+                "overall_notes_score": 0,
+                "strengths": [],
+                "areas_for_improvement": ["No notes were created."],
+                "feedback": "No patient notes were recorded. Creating detailed SOAP notes is an essential part of clinical practice."
+            }
+        
+        try:
+            # Format notes for evaluation
+            formatted_notes = {
+                "subjective": notes.get("subjective", ""),
+                "objective": notes.get("objective", ""),
+                "assessment": notes.get("assessment", ""),
+                "plan": notes.get("plan", "")
+            }
+            
+            # Extract key case information for evaluation context
+            diagnosis = case_info.get("diagnosis", 
+                                 case_info.get("expected_diagnosis", "Unknown"))
+            symptoms = []
+            if "symptoms" in case_info and isinstance(case_info["symptoms"], list):
+                symptoms = case_info["symptoms"]
+            
+            vitals = {}
+            if "vitals" in case_info and isinstance(case_info["vitals"], dict):
+                vitals = case_info["vitals"]
+            
+            # Create a context-appropriate prompt
+            system_prompt = f"""You are a medical education expert evaluating a medical student's SOAP notes.
+            
+Case context:
+- Patient: {case_info.get('name', 'Unknown')}, {case_info.get('age', 'Unknown')} {case_info.get('gender', 'Unknown')}
+- Presenting complaint: {case_info.get('presenting_complaint', 'Unknown complaint')}
+- Correct diagnosis: {diagnosis}
+- Relevant symptoms: {json.dumps(symptoms)}
+- Vital signs: {json.dumps(vitals)}
+
+You have access to the student's SOAP notes. Evaluate the following aspects:
+1. Completeness (1-10): Inclusion of all relevant findings and information
+2. Organization and structure (1-10): Proper use of SOAP format with information in correct sections
+3. Accuracy (1-10): Correctness of recorded information compared to the case details
+4. Medical terminology (1-10): Appropriate use of medical language and terminology
+5. Assessment and plan (1-10): Logical assessment and plan based on findings, identification of key clinical issues
+
+Rate each area on a scale of 1-10.
+Identify specific strengths and areas for improvement with examples from the notes.
+Provide actionable feedback to help the student improve.
+
+Return a JSON object with these fields:
+- completeness_score: int (1-10)
+- organization_score: int (1-10)
+- accuracy_score: int (1-10)
+- terminology_score: int (1-10)
+- assessment_plan_score: int (1-10)
+- overall_notes_score: int (1-10)
+- strengths: array of strings
+- areas_for_improvement: array of strings
+- feedback: string with overall assessment and advice
+"""
+
+            # Call LLM for evaluation
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Evaluate these SOAP notes: {json.dumps(formatted_notes, indent=2)}"}
+                ],
+                temperature=0.3,
+                response_format={"type": "json_object"}
+            )
+            
+            # Parse the response
+            evaluation = json.loads(response.choices[0].message.content)
+            
+            # Ensure all expected fields are present
+            expected_fields = [
+                "completeness_score", "organization_score", "accuracy_score", 
+                "terminology_score", "assessment_plan_score", "overall_notes_score",
+                "strengths", "areas_for_improvement", "feedback"
+            ]
+            
+            for field in expected_fields:
+                if field not in evaluation:
+                    if field.endswith("_score"):
+                        evaluation[field] = 5  # Default middle score
+                    elif field in ["strengths", "areas_for_improvement"]:
+                        evaluation[field] = []
+                    else:
+                        evaluation[field] = "No evaluation available."
+            
+            return evaluation
+            
+        except Exception as e:
+            logger.error(f"Error in notes evaluation: {str(e)}")
+            return {
+                "completeness_score": 5,
+                "organization_score": 5,
+                "accuracy_score": 5,
+                "terminology_score": 5,
+                "assessment_plan_score": 5,
+                "overall_notes_score": 5,
+                "strengths": [],
+                "areas_for_improvement": ["Unable to evaluate notes due to a technical error."],
+                "feedback": f"An error occurred during evaluation. Please try again."
+            }
 
 class ClinicalDecisionEvaluator:
     """
@@ -558,14 +689,15 @@ class DiagnosisEvaluator:
     # Modified evaluate method for DiagnosisEvaluator class in evaluation.py
 
     def evaluate(
-        self, 
-        student_diagnosis: str,
-        ordered_tests: Set[str],
-        ordered_imaging: Set[str],
-        interactions: List[Dict[str, str]],
-        physical_exams: List[Dict[str, Any]] = None,
-        verified_procedures: List[Dict[str, Any]] = None  # Add this parameter
-    ) -> Dict[str, Any]:
+    self, 
+    student_diagnosis: str,
+    ordered_tests: Set[str],
+    ordered_imaging: Set[str],
+    interactions: List[Dict[str, str]],
+    physical_exams: List[Dict[str, Any]] = None,
+    verified_procedures: List[Dict[str, Any]] = None,
+    notes: Dict[str, str] = None
+) -> Dict[str, Any]:
         """
         Performs a comprehensive evaluation of the student's performance.
         
@@ -576,6 +708,7 @@ class DiagnosisEvaluator:
             interactions: List of student-patient interactions
             physical_exams: List of physical examinations performed by the student
             verified_procedures: List of verified examination procedures
+            notes: SOAP notes created by the student
             
         Returns:
             Dict containing comprehensive evaluation results
@@ -606,6 +739,9 @@ class DiagnosisEvaluator:
         if verified_procedures is None:
             verified_procedures = []
         
+        if notes is None:
+            notes = {}
+        
         # Get interaction evaluation
         interaction_eval = self.interaction_evaluator.evaluate_interactions(
             interactions, self.case
@@ -620,6 +756,24 @@ class DiagnosisEvaluator:
         clinical_eval = self.clinical_evaluator.evaluate_clinical_decisions(
             student_diagnosis, ordered_tests, ordered_imaging, physical_exams, self.case
         )
+        
+        # Get notes evaluation if notes are provided
+        notes_eval = {}
+        if notes and any(notes.values()):
+            notes_evaluator = NotesEvaluator(self.config)
+            notes_eval = notes_evaluator.evaluate_notes(notes, self.case)
+        else:
+            notes_eval = {
+                "completeness_score": 0,
+                "organization_score": 0,
+                "accuracy_score": 0,
+                "terminology_score": 0,
+                "assessment_plan_score": 0,
+                "overall_notes_score": 0,
+                "strengths": [],
+                "areas_for_improvement": ["No notes were created."],
+                "feedback": "No patient notes were recorded. Creating detailed SOAP notes is an essential part of clinical practice."
+            }
         
         # Determine correctness based on exact match or close match
         diagnosis_correct = clinical_eval.get("diagnosis_correct", False)
@@ -653,19 +807,27 @@ class DiagnosisEvaluator:
                 "exam_thoroughness": physical_eval.get("thoroughness_score", 0),
                 "exam_relevance": physical_eval.get("relevance_score", 0),
                 "exam_efficiency": physical_eval.get("efficiency_score", 0),
-                "procedural_skill": physical_eval.get("procedural_score", 0),  # Add procedural score
+                "procedural_skill": physical_eval.get("procedural_score", 0),
                 
                 # Clinical decision making
                 "diagnosis_accuracy": clinical_eval.get("diagnosis_accuracy_score", 0),
                 "test_selection": clinical_eval.get("test_selection_score", 0),
                 "clinical_reasoning": clinical_eval.get("clinical_reasoning_score", 0),
                 "resource_efficiency": clinical_eval.get("efficiency_score", 0),
+                
+                # Notes evaluation
+                "notes_completeness": notes_eval.get("completeness_score", 0),
+                "notes_organization": notes_eval.get("organization_score", 0),
+                "notes_accuracy": notes_eval.get("accuracy_score", 0),
+                "notes_terminology": notes_eval.get("terminology_score", 0),
+                "notes_assessment": notes_eval.get("assessment_plan_score", 0),
             },
             
             # Overall scores for major categories
             "overall_interaction_score": interaction_eval.get("overall_interaction_score", 0),
             "overall_physical_exam_score": physical_eval.get("overall_exam_score", 0),
             "overall_clinical_score": clinical_eval.get("overall_clinical_score", 0),
+            "overall_notes_score": notes_eval.get("overall_notes_score", 0),
             
             # Specific feedback elements
             "interaction_strengths": interaction_eval.get("strengths", []),
@@ -679,30 +841,36 @@ class DiagnosisEvaluator:
             "missed_critical_tests": clinical_eval.get("missed_critical_tests", []),
             "unnecessary_tests": clinical_eval.get("unnecessary_tests", []),
             
+            "notes_strengths": notes_eval.get("strengths", []),
+            "notes_improvements": notes_eval.get("areas_for_improvement", []),
+            
             # Category feedback
             "interaction_feedback": interaction_eval.get("feedback", ""),
             "physical_exam_feedback": physical_eval.get("feedback", ""),
             "clinical_feedback": clinical_eval.get("feedback", ""),
+            "notes_feedback": notes_eval.get("feedback", ""),
             
             # Combined feedback
-            "feedback": self._generate_combined_feedback(interaction_eval, physical_eval, clinical_eval)
+            "feedback": self._generate_combined_feedback(interaction_eval, physical_eval, clinical_eval, notes_eval)
         }
         
         return combined_eval
     
     def _generate_combined_feedback(
-        self, 
-        interaction_eval: Dict[str, Any],
-        physical_eval: Dict[str, Any],
-        clinical_eval: Dict[str, Any]
-    ) -> str:
+    self, 
+    interaction_eval: Dict[str, Any],
+    physical_eval: Dict[str, Any],
+    clinical_eval: Dict[str, Any],
+    notes_eval: Dict[str, Any]  # Add notes_eval parameter
+) -> str:
         """
-        Generates combined feedback from all three evaluations.
+        Generates combined feedback from all evaluations.
         
         Args:
             interaction_eval: Results of interaction evaluation
             physical_eval: Results of physical examination evaluation
             clinical_eval: Results of clinical decision evaluation
+            notes_eval: Results of notes evaluation
             
         Returns:
             String containing combined feedback
@@ -742,8 +910,19 @@ class DiagnosisEvaluator:
         else:
             clinical_feedback = "Your clinical reasoning needs significant improvement. "
         
+        # Notes assessment (new)
+        notes_score = notes_eval.get("overall_notes_score", 0)
+        if notes_score >= 8:
+            notes_feedback = "Your patient documentation was comprehensive and well-structured. "
+        elif notes_score >= 6:
+            notes_feedback = "Your patient notes were adequate but could be improved. "
+        elif notes_score > 0:  # Only include if they created notes
+            notes_feedback = "Your patient documentation needs significant improvement. "
+        else:
+            notes_feedback = "You did not create patient notes, which is an essential part of clinical practice. "
+        
         # Combine all feedback
-        combined = f"{diagnosis_feedback}{communication_feedback}{physical_feedback}{clinical_feedback}\n\n"
+        combined = f"{diagnosis_feedback}{communication_feedback}{physical_feedback}{clinical_feedback}{notes_feedback}\n\n"
         
         # Add specific points from each evaluation
         combined += "Key observations:\n"
@@ -776,10 +955,17 @@ class DiagnosisEvaluator:
             for test in missed_tests:
                 combined += f"- {test}\n"
         
-        unnecessary = clinical_eval.get("unnecessary_tests", [])
-        if unnecessary:
-            combined += "\nUnnecessary tests that could have been avoided:\n"
-            for test in unnecessary[:3]:  # Limit to top 3
-                combined += f"- {test}\n"
+        # Add notes feedback (new)
+        notes_strengths = notes_eval.get("strengths", [])
+        if notes_strengths:
+            combined += "\nStrengths in patient documentation:\n"
+            for strength in notes_strengths[:2]:  # Limit to top 2
+                combined += f"- {strength}\n"
+                
+        notes_improvements = notes_eval.get("areas_for_improvement", [])
+        if notes_improvements:
+            combined += "\nAreas to improve in patient documentation:\n"
+            for improvement in notes_improvements[:3]:  # Limit to top 3
+                combined += f"- {improvement}\n"
         
         return combined

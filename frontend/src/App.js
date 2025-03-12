@@ -1,11 +1,12 @@
-// Complete App.js with tabbed navigation and VitalSigns integration
+// Complete App.js with tabbed navigation, VitalSigns, and NotesPanel integration
 import React, { useState, useEffect } from 'react';
 import ChatWindow from './ChatWindow';
 import DiagnosisPanel from './DiagnosisPanel';
 import TestOrderingPanel from './TestOrderingPanel';
 import PhysicalExamPanel from './PhysicalExamPanel';
 import CaseSelectionScreen from './CaseSelectionScreen';
-import VitalSigns from './VitalSigns'; // Import the VitalSigns component
+import VitalSigns from './VitalSigns';
+import NotesPanel from './NotesPanel'; // Import the NotesPanel component
 import './App.css';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
   const [isNewCase, setIsNewCase] = useState(false);
   const [showCaseSelection, setShowCaseSelection] = useState(true); // Start with case selection
   const [activeTab, setActiveTab] = useState('patient'); // Default to patient tab
+  const [notes, setNotes] = useState({}); // Add state for notes
 
   // We'll keep this to handle case loading on initial visit, but we'll show the selection screen
   useEffect(() => {
@@ -76,6 +78,9 @@ function App() {
       // Signal to child components that we have a new case
       setIsNewCase(true);
       
+      // Reset notes for new case
+      setNotes({});
+      
       // Hide case selection screen when we have a case
       setShowCaseSelection(false);
       
@@ -97,6 +102,7 @@ function App() {
     setIsNewCase(true);
     setShowCaseSelection(false);
     setActiveTab('patient'); // Reset to the patient tab
+    setNotes({}); // Reset notes
   };
 
   const handleDiagnosisSubmitted = () => {
@@ -112,6 +118,28 @@ function App() {
     setShowCaseSelection(true);
     setIsDiagnosisSubmitted(false);
     setIsNewCase(false);
+    setNotes({});
+  };
+
+  // Handle notes update
+  const handleNotesUpdate = (updatedNotes) => {
+    setNotes(updatedNotes);
+    
+    // If we want to save to the backend as well
+    if (caseInfo && caseInfo.id) {
+      fetch('/api/save-notes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes: updatedNotes,
+          case_id: caseInfo.id
+        })
+      }).catch(err => {
+        console.error('Error saving notes to backend:', err);
+      });
+    }
   };
 
   // Show case selection screen if the flag is true
@@ -278,6 +306,15 @@ function App() {
           </div>
         )}
       </div>
+      
+      {/* Add NotesPanel - always visible across all tabs */}
+      {caseInfo && (
+        <NotesPanel 
+          caseInfo={caseInfo}
+          isDisabled={isDiagnosisSubmitted}
+          onNoteUpdate={handleNotesUpdate}
+        />
+      )}
     </div>
   );
 }

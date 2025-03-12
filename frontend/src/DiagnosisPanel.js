@@ -13,6 +13,19 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
 
     setLoading(true);
     try {
+      // Get notes from sessionStorage for this case
+      let notes = {};
+      if (case_info && case_info.id) {
+        const savedNotes = sessionStorage.getItem(`notes_${case_info.id}`);
+        if (savedNotes) {
+          try {
+            notes = JSON.parse(savedNotes);
+          } catch (e) {
+            console.error('Error parsing saved notes:', e);
+          }
+        }
+      }
+
       const response = await fetch('/api/submit-diagnosis', {
         method: 'POST',
         headers: {
@@ -21,8 +34,13 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
         body: JSON.stringify({
           diagnosis: diagnosis.trim(),
           case_id: case_info.id || 'current',
+          notes: notes // Include notes in the diagnosis submission
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
 
       const data = await response.json();
       setResult(data);
@@ -92,6 +110,7 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
           <div className="evaluation-summary">
             <h5>Performance Summary:</h5>
             <ul>
+              {/* Original evaluation items */}
               {result.key_findings_identified && (
                 <li className="positive">Identified key findings</li>
               )}
@@ -106,6 +125,21 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
               )}
               {result.missed_critical_tests && result.missed_critical_tests.length > 0 && (
                 <li className="negative">Failed to order critical tests: {result.missed_critical_tests.join(', ')}</li>
+              )}
+              
+              {/* Add notes evaluation items */}
+              {result.notes_strengths && result.notes_strengths.length > 0 && (
+                <li className="positive">Documentation strength: {result.notes_strengths[0]}</li>
+              )}
+              {result.notes_improvements && result.notes_improvements.length > 0 && (
+                <li className="negative">Documentation needs improvement: {result.notes_improvements[0]}</li>
+              )}
+              {result.overall_notes_score > 0 ? (
+                <li className={result.overall_notes_score >= 7 ? "positive" : "negative"}>
+                  Documentation score: {result.overall_notes_score}/10
+                </li>
+              ) : (
+                <li className="negative">No patient notes created</li>
               )}
             </ul>
           </div>

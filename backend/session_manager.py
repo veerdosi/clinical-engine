@@ -30,7 +30,8 @@ class SessionManager:
         self.ordered_imaging = set()
         self.physical_exams = []
         self.patient_interactions = []
-        self.verified_exam_procedures = []  # Reset verified procedures
+        self.verified_exam_procedures = []
+        self.patient_notes = {}  # Reset notes too
         self.session_start_time = datetime.now()
         logger.info(f"Session reset for case {case_id}")
     
@@ -68,6 +69,35 @@ class SessionManager:
             self.patient_interactions[index]["patient_response"] = patient_response
             return True
         return False
+    
+    def save_notes(self, notes):
+        """
+        Saves the patient notes for the current session.
+        
+        Args:
+            notes (dict): Dictionary containing SOAP notes
+            
+        Returns:
+            bool: True if notes were saved successfully
+        """
+        if not hasattr(self, 'patient_notes'):
+            self.patient_notes = {}
+        
+        self.patient_notes = notes
+        logger.info(f"Notes saved for case {self.case_id}")
+        return True
+    
+    def get_notes(self):
+        """
+        Retrieves the current patient notes.
+        
+        Returns:
+            dict: The current patient notes or empty dict if none exist
+        """
+        if not hasattr(self, 'patient_notes'):
+            self.patient_notes = {}
+        
+        return self.patient_notes
     
     def order_test(self, test_name):
         """
@@ -157,6 +187,7 @@ class SessionManager:
         """
         return self.verified_exam_procedures
     
+    # Update get_session_summary to include notes status
     def get_session_summary(self):
         """
         Returns a summary of the current session.
@@ -164,6 +195,12 @@ class SessionManager:
         Returns:
             dict: Session summary information
         """
+        notes_word_count = 0
+        if hasattr(self, 'patient_notes'):
+            for section, content in self.patient_notes.items():
+                if content:
+                    notes_word_count += len(content.split())
+        
         return {
             "case_id": self.case_id,
             "session_duration": (datetime.now() - self.session_start_time).total_seconds(),
@@ -171,7 +208,9 @@ class SessionManager:
             "tests_ordered": list(self.ordered_tests),
             "imaging_ordered": list(self.ordered_imaging),
             "physical_exams_performed": len(self.physical_exams),
-            "verified_exam_procedures": len(self.verified_exam_procedures)
+            "verified_exam_procedures": len(self.verified_exam_procedures),
+            "notes_word_count": notes_word_count,
+            "has_notes": notes_word_count > 0
         }
     
     def get_ordered_tests(self):

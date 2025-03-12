@@ -60,7 +60,55 @@ class APIRoutes:
             except Exception as e:
                 logger.error(f"Error creating new case: {str(e)}")
                 return jsonify({"error": str(e)}), 500
-        
+
+        # Notes API endpoints
+        @blueprint.route('/save-notes', methods=['POST'])
+        def save_notes():
+            try:
+                data = request.get_json()
+                if not data or 'notes' not in data:
+                    return jsonify({"error": "No notes provided"}), 400
+                    
+                notes = data.get('notes', {})
+                case_id = data.get('case_id', 'current')
+                
+                # Store notes in session manager
+                self.session_manager.save_notes(notes)
+                
+                return jsonify({"success": True, "message": "Notes saved successfully"})
+            except Exception as e:
+                logger.error(f"Error saving notes: {str(e)}")
+                return jsonify({"error": str(e)}), 500
+
+        @blueprint.route('/evaluate-notes', methods=['POST'])
+        def evaluate_notes():
+            try:
+                data = request.get_json()
+                case_id = data.get('case_id', 'current')
+                
+                # Get the current case
+                current_case = self.case_manager.get_current_case()
+                if not current_case:
+                    return jsonify({"error": "No active case"}), 404
+                    
+                # Get the notes from session manager
+                notes = self.session_manager.get_notes()
+                
+                if not notes or not any(notes.values()):
+                    return jsonify({"error": "No notes to evaluate"}), 400
+                
+                # Get the evaluator
+                from backend.evaluation import NotesEvaluator
+                notes_evaluator = NotesEvaluator(self.case_manager.config)
+                
+                # Evaluate the notes
+                evaluation_result = notes_evaluator.evaluate_notes(notes, current_case)
+                
+                return jsonify(evaluation_result)
+            except Exception as e:
+                logger.error(f"Error evaluating notes: {str(e)}")
+                return jsonify({"error": str(e)}), 500
+
         @blueprint.route('/submit-diagnosis', methods=['POST'])
         def evaluate_diagnosis():
             try:
@@ -70,6 +118,9 @@ class APIRoutes:
                     
                 student_diagnosis = data.get('diagnosis', '').strip()
                 case_id = data.get('case_id', 'current')
+                
+                # Get notes from the request or session manager
+                notes = data.get('notes', None) or self.session_manager.get_notes()
                 
                 logger.info(f"Evaluating diagnosis: {student_diagnosis} for case {case_id}")
                 
@@ -88,14 +139,15 @@ class APIRoutes:
                     logger.warning("Session manager missing get_verified_exam_procedures method. Using empty list.")
                     verified_procedures = []
                 
-                # Evaluate the diagnosis with physical exams and verified procedures included
+                # Evaluate the diagnosis with physical exams, verified procedures, and notes included
                 evaluation_result = evaluator.evaluate(
                     student_diagnosis,
                     self.session_manager.get_ordered_tests(),
                     self.session_manager.get_ordered_imaging(),
                     self.session_manager.get_patient_interactions(),
                     self.session_manager.get_physical_exams(),
-                    verified_procedures
+                    verified_procedures,
+                    notes  # Include notes in evaluation
                 )
                 
                 return jsonify(evaluation_result)
