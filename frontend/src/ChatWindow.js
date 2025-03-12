@@ -2,8 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { sendMessage } from './api';
 import './ChatWindow.css';
 
-const ChatWindow = ({ isDiagnosisSubmitted, isNewCase, onNewCaseStart }) => {
-  const [conversation, setConversation] = useState([]);
+const ChatWindow = ({ 
+  isDiagnosisSubmitted, 
+  isNewCase, 
+  onNewCaseStart, 
+  conversationHistory = [], 
+  onNewMessage 
+}) => {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [preferVoiceResponse, setPreferVoiceResponse] = useState(true);
@@ -17,7 +22,7 @@ const ChatWindow = ({ isDiagnosisSubmitted, isNewCase, onNewCaseStart }) => {
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
-  }, [conversation]);
+  }, [conversationHistory]);
   
   // Effect to handle cleanup of voice recording
   useEffect(() => {
@@ -28,10 +33,9 @@ const ChatWindow = ({ isDiagnosisSubmitted, isNewCase, onNewCaseStart }) => {
     };
   }, [isRecording]);
   
-  // Effect to clear chat history when new case starts
+  // Effect to clear chat input when new case starts
   useEffect(() => {
     if (isNewCase) {
-      setConversation([]);
       setMessage("");
       setIsLoading(false);
       setIsRecording(false);
@@ -44,7 +48,7 @@ const ChatWindow = ({ isDiagnosisSubmitted, isNewCase, onNewCaseStart }) => {
   }, [isNewCase, onNewCaseStart]);
   
   const onMessageReceived = (msg) => {
-    setConversation((prev) => [...prev, msg]);
+    onNewMessage(msg);
   };
 
   const startRecording = async () => {
@@ -200,13 +204,13 @@ const ChatWindow = ({ isDiagnosisSubmitted, isNewCase, onNewCaseStart }) => {
       </div>
       
       <div className="chat-history" ref={chatHistoryRef}>
-        {conversation.length === 0 && (
+        {conversationHistory.length === 0 && (
           <div className="chat-welcome">
             <p>Begin the patient interview. Ask questions to gather information about the patient's symptoms, medical history, and current condition.</p>
           </div>
         )}
         
-        {conversation.map((msg, index) => (
+        {conversationHistory.map((msg, index) => (
           <div key={index} className={`chat-message ${msg.sender}`}>
             <p>{msg.text}</p>
             {msg.hasAudio && !preferVoiceResponse && msg.audio && (

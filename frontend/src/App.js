@@ -1,4 +1,5 @@
-// Complete App.js with tabbed navigation, VitalSigns, and NotesPanel integration
+// Complete App.js with tabbed navigation, VitalSigns, NotesPanel integration,
+// and conversation history persistence
 import React, { useState, useEffect } from 'react';
 import ChatWindow from './ChatWindow';
 import DiagnosisPanel from './DiagnosisPanel';
@@ -19,6 +20,7 @@ function App() {
   const [showCaseSelection, setShowCaseSelection] = useState(true); // Start with case selection
   const [activeTab, setActiveTab] = useState('patient'); // Default to patient tab
   const [notes, setNotes] = useState({}); // Add state for notes
+  const [conversationHistory, setConversationHistory] = useState([]); // Add state for conversation history
  
   // We'll keep this to handle case loading on initial visit, but we'll show the selection screen
   useEffect(() => {
@@ -82,6 +84,9 @@ function App() {
       // Reset notes for new case
       setNotes({});
       
+      // Reset conversation history
+      setConversationHistory([]);
+      
       // Hide case selection screen when we have a case
       setShowCaseSelection(false);
       
@@ -104,6 +109,7 @@ function App() {
     setShowCaseSelection(false);
     setActiveTab('patient'); // Reset to the patient tab
     setNotes({}); // Reset notes
+    setConversationHistory([]); // Reset conversation history
   };
 
   const handleDiagnosisSubmitted = () => {
@@ -120,6 +126,7 @@ function App() {
     setIsDiagnosisSubmitted(false);
     setIsNewCase(false);
     setNotes({});
+    setConversationHistory([]);
   };
 
   // Handle notes update
@@ -141,6 +148,11 @@ function App() {
         console.error('Error saving notes to backend:', err);
       });
     }
+  };
+
+  // Handle new messages in conversation
+  const handleNewMessage = (message) => {
+    setConversationHistory(prev => [...prev, message]);
   };
 
   // Show case selection screen if the flag is true
@@ -276,6 +288,8 @@ function App() {
                   isDiagnosisSubmitted={isDiagnosisSubmitted}
                   isNewCase={isNewCase}
                   onNewCaseStart={handleNewCaseStarted}
+                  conversationHistory={conversationHistory}
+                  onNewMessage={handleNewMessage}
                 />
               </div>
               

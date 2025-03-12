@@ -50,8 +50,9 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
       setShowTimeline(true);
       
       // Notify parent component that diagnosis has been submitted
+      // Pass the result data to allow parent to access timeline data
       if (onDiagnosisSubmitted) {
-        onDiagnosisSubmitted();
+        onDiagnosisSubmitted(data);
       }
     } catch (error) {
       console.error('Error submitting diagnosis:', error);

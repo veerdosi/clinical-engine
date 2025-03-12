@@ -66,6 +66,22 @@ class APIRoutes:
                 logger.error(f"Error creating new case: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
+        @blueprint.route('/session-timeline', methods=['GET'])
+        def get_session_timeline():
+            try:
+                # Get timeline data from session manager
+                timeline = self.session_manager.get_session_timeline()
+                efficiency_metrics = self.session_manager.get_efficiency_metrics()
+                
+                # Return the data
+                return jsonify({
+                    "timeline": timeline,
+                    "efficiency_metrics": efficiency_metrics
+                })
+            except Exception as e:
+                logger.error(f"Error getting session timeline: {str(e)}")
+                return jsonify({"error": str(e)}), 500
+
         # Notes API endpoints
         @blueprint.route('/save-notes', methods=['POST'])
         def save_notes():
