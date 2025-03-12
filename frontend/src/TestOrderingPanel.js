@@ -264,9 +264,11 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
               onChange={handleCustomTestChange}
               disabled={isDisabled || isOrdering}
             />
-            {selectedTab === 'imaging' && (
+            {(selectedTab === 'imaging' || selectedTab === 'procedure') && (
               <div className="custom-test-note">
-                <p><strong>Note:</strong> Specialized procedures will provide text reports only.</p>
+                <p>
+                  <strong>Note:</strong> Specialized {selectedTab === 'procedure' ? 'procedures' : 'studies'} will provide text reports only.
+                </p>
               </div>
             )}
           </div>
@@ -289,15 +291,52 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
       
       {testResults && (
         <div className="test-results">
-          <h4>Results:</h4>
-          <div 
-            className="result-content"
-            dangerouslySetInnerHTML={{ 
-              __html: testResults.markdown ? 
-                testResults.markdown.replace(/\n/g, '<br>') : 
-                `<p>${testResults.message || 'Test results received.'}</p>` 
-            }} 
-          />
+          <h4>
+            {selectedTab === 'lab'
+              ? 'Lab Results:'
+              : selectedTab === 'imaging'
+              ? 'Imaging Report:'
+              : 'Procedure Report:'}
+          </h4>
+          {(testResults.markdown || testResults.report) ? (
+            <div className="markdown-results">
+              {(testResults.markdown || testResults.report).split('\n').map((line, index) => {
+                // Handle headers
+                if (line.startsWith('# ')) {
+                  return <h1 key={index}>{line.substring(2)}</h1>;
+                } else if (line.startsWith('## ')) {
+                  return <h2 key={index}>{line.substring(3)}</h2>;
+                } else if (line.startsWith('### ')) {
+                  return <h3 key={index}>{line.substring(4)}</h3>;
+                }
+                // Handle tables
+                else if (line.includes('|')) {
+                  // Skip table separators like |---|---|
+                  if (line.match(/^\|[\s-:]+\|$/)) return null;
+                  
+                  const cells = line.split('|').filter(cell => cell.trim() !== '');
+                  return (
+                    <div key={index} className="table-row">
+                      {cells.map((cell, cellIndex) => (
+                        <div key={cellIndex} className="table-cell" 
+                            dangerouslySetInnerHTML={{ __html: cell.trim().replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                      ))}
+                    </div>
+                  );
+                }
+                // Handle regular text with bold formatting
+                else if (line.trim() !== '') {
+                  return <p key={index} dangerouslySetInnerHTML={{ 
+                    __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+                  }} />;
+                }
+                // Handle empty lines
+                return line.trim() === '' ? <br key={index} /> : null;
+              })}
+            </div>
+          ) : (
+            <p>{testResults.message || 'Test results received.'}</p>
+          )}
         </div>
       )}
     </div>

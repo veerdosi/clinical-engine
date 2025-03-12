@@ -139,15 +139,12 @@ class APIRoutes:
                     markdown_report = self.lab_system.generate_markdown_report(lab_results)
                     
                     return jsonify({
-                        "success": True,
                         "message": f"Test '{test_name}' ordered successfully",
-                        "results": lab_results,
                         "markdown": markdown_report
                     })
                 else:
                     # Basic response if lab system not available
                     return jsonify({
-                        "success": True,
                         "message": f"Test '{test_name}' ordered successfully",
                         "results": None
                     })

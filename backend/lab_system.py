@@ -1043,50 +1043,30 @@ Return a JSON object with exactly this format:
                     
         return filtered_history
     
-    def generate_pdf_report(self, lab_results: dict, output_filename: str = "lab_report.pdf") -> None:
+    def generate_markdown_report(self, lab_results: dict) -> str:
         """
-        Generate a PDF report from structured lab results with amazing formatting,
-        excluding the interpretation section.
+        Generate a markdown report from structured lab results with beautiful formatting.
+        Returns the markdown string directly.
         """
-        # Create the PDF document
-        doc = SimpleDocTemplate(
-            output_filename,
-            pagesize=letter,
-            rightMargin=72, leftMargin=72,
-            topMargin=72, bottomMargin=18
-        )
+        # Build the markdown content as a string
+        markdown = "# Laboratory Results\n\n"
+        markdown += f"**Case ID:** {lab_results.get('case_id', 'Unknown')}  \n"
+        markdown += f"**Ordered By:** {lab_results.get('ordered_by', 'Unknown')}  \n"
+        markdown += f"**Date/Time:** {lab_results.get('timestamp', 'Unknown')}  \n\n"
         
-        # Define styles for the document
-        styles = getSampleStyleSheet()
-        styles.add(ParagraphStyle(name='CenterTitle', alignment=1, fontSize=18, spaceAfter=20))
-        styles.add(ParagraphStyle(name='Heading', fontSize=14, spaceAfter=10, textColor=colors.darkblue))
-        
-        elements = []
-        
-        # Title
-        title = Paragraph("Laboratory Results", styles['CenterTitle'])
-        elements.append(title)
-        
-        # Metadata: Case ID, Ordered By, Date/Time
-        metadata_text = f"""
-        <b>Case ID:</b> {lab_results.get('case_id', 'Unknown')}<br/>
-        <b>Ordered By:</b> {lab_results.get('ordered_by', 'Unknown')}<br/>
-        <b>Date/Time:</b> {lab_results.get('timestamp', 'Unknown')}
-        """
-        elements.append(Paragraph(metadata_text, styles["Normal"]))
-        elements.append(Spacer(1, 12))
-        
-        # Critical values section, if any
+        # Add critical values if available
         critical_values = lab_results.get('critical_values', [])
         if critical_values:
-            elements.append(Paragraph("⚠️ Critical Values", styles['Heading']))
+            markdown += "## ⚠️ Critical Values\n\n"
             for crit in critical_values:
-                crit_text = f"<b>{crit['test']}:</b> {crit['value']} {crit['units']} (Threshold: {crit['threshold']})"
-                elements.append(Paragraph(crit_text, styles["Normal"]))
-            elements.append(Spacer(1, 12))
+                markdown += f"**{crit['test']}:** {crit['value']} {crit['units']} (Threshold: {crit['threshold']})  \n"
+            markdown += "\n"
         
-        # Create table data for test results
-        table_data = [["Test", "Result", "Flag", "Reference Range", "Units"]]
+        # Create a table for test results
+        markdown += "## Test Results\n\n"
+        markdown += "| Test | Result | Flag | Reference Range | Units |\n"
+        markdown += "|------|--------|------|----------------|-------|\n"
+        
         for result in lab_results.get("results", []):
             test_name = result.get("test_name", "Unknown")
             value = result.get("result", "N/A")
@@ -1096,24 +1076,10 @@ Return a JSON object with exactly this format:
             
             # Emphasize abnormal values
             if flag:
-                test_name = f"<b>{test_name}</b>"
-                value = f"<b>{value}</b>"
-                flag = f"<b>{flag}</b>"
-            table_data.append([test_name, value, flag, reference, units])
+                test_name = f"**{test_name}**"
+                value = f"**{value}**"
+                flag = f"**{flag}**"
+            
+            markdown += f"| {test_name} | {value} | {flag} | {reference} | {units} |\n"
         
-        # Build table with formatting
-        table = Table(table_data, colWidths=[1.5*inch]*5)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.lightblue),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,0), 12),
-            ('BOTTOMPADDING', (0,0), (-1,0), 12),
-            ('BACKGROUND', (0,1), (-1,-1), colors.beige),
-            ('GRID', (0,0), (-1,-1), 1, colors.black)
-        ]))
-        elements.append(table)
-        
-        # Build the PDF file
-        doc.build(elements)
+        return markdown

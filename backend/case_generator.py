@@ -10,9 +10,9 @@ class CaseParameters:
         self.difficulty: str = difficulty
         self.avoid_conditions: list = avoid_conditions or []
         self.complexity_map: dict[str, str] = {
-            "easy": "common presentation with 1-2 classic symptoms",
-            "moderate": "atypical presentation with comorbidities",
-            "hard": "rare condition with multiple diagnostic red herrings"
+            "Easy": "common presentation with 1-2 classic symptoms",
+            "Moderate": "atypical presentation with comorbidities",
+            "Hard": "rare condition with multiple diagnostic red herrings"
         }
 
 class CaseGenerator:
