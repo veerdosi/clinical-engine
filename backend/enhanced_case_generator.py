@@ -11,6 +11,60 @@ from backend.case_generator import CaseParameters, CaseGenerator
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def ensure_safe_type(value, expected_type, default_value=None, name=None):
+    """
+    Utility function to ensure a value is of the expected type.
+    
+    Args:
+        value: The value to check
+        expected_type: The expected type (list, dict, etc.)
+        default_value: The default value to use if conversion fails
+        name: Name of the field for logging purposes
+        
+    Returns:
+        The value converted to the expected type, or the default value
+    """
+    field_name = name or "value"
+    
+    # If value is already the expected type, return it
+    if isinstance(value, expected_type):
+        return value
+        
+    # If value is None, return default
+    if value is None:
+        return default_value
+        
+    # Try to convert based on expected type
+    try:
+        if expected_type == list:
+            if isinstance(value, str):
+                return [value]
+            elif isinstance(value, dict):
+                return [f"{k}: {v}" for k, v in value.items()]
+            elif isinstance(value, int):
+                logger.warning(f"{field_name} is an integer: {value}. Converting to string in list.")
+                return [str(value)]
+            else:
+                return list(value)  # Attempt to convert to list
+        elif expected_type == dict:
+            if isinstance(value, str):
+                return {value: True}
+            elif isinstance(value, int):
+                logger.warning(f"{field_name} is an integer: {value}. Converting to empty dict.")
+                return {}
+            else:
+                return dict(value)  # Attempt to convert to dict
+        elif expected_type == str:
+            return str(value)
+        elif expected_type == int:
+            return int(value)
+        else:
+            logger.warning(f"Unsupported conversion to {expected_type.__name__} for {field_name}")
+            return default_value
+    except Exception as e:
+        logger.warning(f"Error converting {field_name} to {expected_type.__name__}: {str(e)}")
+        return default_value
+
 class PerplexityClient:
     """
     Client for interacting with Perplexity AI's API to retrieve medically accurate information.
@@ -142,6 +196,7 @@ class PerplexityClient:
             logger.error(f"Error in Perplexity search: {error_details}")
             return {"error": f"Perplexity API error: {error_details}"}
             
+
     def search(self, query: str, max_tokens: int = 4096) -> Dict[str, Any]:
         """
         Perform a synchronous search using Perplexity AI by running the async method in an event loop.
@@ -161,12 +216,72 @@ class PerplexityClient:
             asyncio.set_event_loop(loop)
             
         try:
-            return loop.run_until_complete(self.search_async(query, max_tokens))
+            result = loop.run_until_complete(self.search_async(query, max_tokens))
+            
+            # DEBUGGING: Add these lines to inspect the result format
+            logger.info(f"Perplexity result type: {type(result)}")
+            if isinstance(result, dict):
+                for key, value in result.items():
+                    logger.info(f"Result field '{key}' is type: {type(value)}")
+                    
+                    # Check for problematic integer values
+                    if isinstance(value, int) and key not in ['age']: # Age can be an integer
+                        logger.warning(f"Integer value found in field '{key}': {value}")
+            
+            # Make sure we always return a dictionary, even if we get something unexpected
+            if not isinstance(result, dict):
+                logger.warning(f"Unexpected result type from Perplexity: {type(result)}. Converting to dict.")
+                try:
+                    if isinstance(result, str):
+                        # Try to parse string as JSON
+                        import json
+                        return json.loads(result)
+                    elif isinstance(result, list):
+                        # If it's a list, convert to a dict with standard fields
+                        return {"diagnosis": "Unknown", "symptoms": result}
+                    elif isinstance(result, int):
+                        logger.warning(f"Received integer result from Perplexity: {result}. Converting to dict.")
+                        return {"diagnosis": f"Unknown condition (error code: {result})", 
+                                "symptoms": [], 
+                                "vitals": {}, 
+                                "past_medical_conditions": [],
+                                "medication_allergies": [],
+                                "negative_findings": [],
+                                "critical_tests": []}
+                    else:
+                        # For any other type, return a default case structure
+                        return {"diagnosis": f"Unknown condition (unexpected result type)", 
+                            "symptoms": [], 
+                            "vitals": {}, 
+                            "past_medical_conditions": [],
+                            "medication_allergies": [],
+                            "negative_findings": [],
+                            "critical_tests": []}
+                except Exception as e:
+                    logger.error(f"Error converting Perplexity result: {str(e)}")
+                    return {"error": f"Perplexity result conversion error: {str(e)}"}
+            
+            # Sanitize and validate results
+            for key, value in list(result.items()):
+                # Handle integer values in most fields
+                if isinstance(value, int) and key not in ['age']:
+                    logger.warning(f"Integer value found in field '{key}': {value}. Converting to string.")
+                    result[key] = str(value)
+                    
+            # Ensure critical fields exist and have correct types
+            result['symptoms'] = ensure_safe_type(result.get('symptoms', []), list, [], 'symptoms')
+            result['past_medical_conditions'] = ensure_safe_type(result.get('past_medical_conditions', []), list, [], 'past_medical_conditions')
+            result['medication_allergies'] = ensure_safe_type(result.get('medication_allergies', []), list, [], 'medication_allergies')
+            result['negative_findings'] = ensure_safe_type(result.get('negative_findings', []), list, [], 'negative_findings')
+            result['critical_tests'] = ensure_safe_type(result.get('critical_tests', []), list, [], 'critical_tests')
+            result['key_findings'] = ensure_safe_type(result.get('key_findings', []), list, [], 'key_findings')
+            result['vitals'] = ensure_safe_type(result.get('vitals', {}), dict, {}, 'vitals')
+            
+            return result
         except Exception as e:
             error_details = str(e)
             logger.error(f"Error in synchronous Perplexity search: {error_details}")
             return {"error": f"Perplexity API error: {error_details}"}
-
 
 class EnhancedCaseGenerator(CaseGenerator):
     """
@@ -176,6 +291,62 @@ class EnhancedCaseGenerator(CaseGenerator):
     def __init__(self, config: MedicalSimConfig):
         super().__init__(config)
         self.perplexity_client = PerplexityClient(config.perplexity_api_key)
+
+    def _process_vitals_ranges(self, case_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Process vitals range data to ensure it's properly formatted.
+        
+        Args:
+            case_data: The case data from Perplexity
+            
+        Returns:
+            The updated case data with properly formatted vitals ranges
+        """
+        logger.info("Processing vitals ranges")
+        
+        # Check if vitals_range exists and is a valid type
+        if "vitals_range" in case_data:
+            case_data["vitals_range"] = ensure_safe_type(case_data["vitals_range"], dict, {}, 'vitals_range')
+            
+            # Process each field to ensure it's properly formatted
+            for key, value in list(case_data["vitals_range"].items()):
+                if isinstance(value, int):
+                    logger.warning(f"vitals_range.{key} is an integer: {value}. Converting to dict.")
+                    case_data["vitals_range"][key] = {"min": value-10, "max": value+10}
+                elif not isinstance(value, dict):
+                    logger.warning(f"Unexpected vitals_range.{key} type: {type(value)}. Removing.")
+                    case_data["vitals_range"].pop(key, None)
+        
+        # Ensure "vitals" is a dictionary, not an integer
+        if "vitals" in case_data:
+            case_data["vitals"] = ensure_safe_type(case_data["vitals"], dict, {
+                "HR": "70 bpm",
+                "BP": "120/80 mmHg",
+                "RR": "16 breaths/min",
+                "Temp": "37.0 °C",
+                "SpO2": "98%"
+            }, 'vitals')
+            
+            # Ensure vital fields are strings, not integers
+            for key, value in list(case_data["vitals"].items()):
+                if isinstance(value, int):
+                    logger.warning(f"vitals.{key} is an integer: {value}. Converting to string.")
+                    if key == "HR":
+                        case_data["vitals"][key] = f"{value} bpm"
+                    elif key == "BP":
+                        case_data["vitals"][key] = f"{value}/80 mmHg"  # Default diastolic
+                    elif key == "RR":
+                        case_data["vitals"][key] = f"{value} breaths/min"
+                    elif key == "Temp":
+                        case_data["vitals"][key] = f"{value} °C"
+                    elif key == "SpO2":
+                        case_data["vitals"][key] = f"{value}%"
+                    elif key == "Pain":
+                        case_data["vitals"][key] = f"{value}/10"
+                    else:
+                        case_data["vitals"][key] = str(value)
+        
+        return case_data
     
     def _generate_perplexity_query(self, params: CaseParameters) -> str:
         """
@@ -237,9 +408,13 @@ class EnhancedCaseGenerator(CaseGenerator):
     Base your case on evidence-based medical information and include citations from relevant medical literature.
     Return ONLY a valid JSON object as specified, nothing else.
     """
+        # If we have conditions to avoid, add them to the query
+        if hasattr(params, 'avoid_conditions') and params.avoid_conditions:
+            avoid_str = ", ".join(params.avoid_conditions)
+            query += f"\n\nIMPORTANT: Do NOT generate any of these diagnoses: {avoid_str}"
         
         return query
-    
+
     def generate_case(self, params: CaseParameters) -> Dict:
         """
         Generates a case using Perplexity AI for medical information in JSON format.
@@ -251,7 +426,6 @@ class EnhancedCaseGenerator(CaseGenerator):
             Dict representing the generated case
         """
         # Add variation by supporting a list of conditions to avoid
-        # This can be passed in to ensure we don't get repeat diagnoses
         avoid_conditions = getattr(params, 'avoid_conditions', [])
         try:
             logger.info(f"Generating {params.difficulty} case for {params.specialty}")
@@ -312,6 +486,17 @@ class EnhancedCaseGenerator(CaseGenerator):
                     if "vital_signs" in case_data:
                         case_data["vital_signs"]["Pain"] = f"{pain_match.group(1)}/10"
             
+            # Process vitals ranges to ensure proper format
+            case_data = self._process_vitals_ranges(case_data)
+            
+            # Ensure all list fields have correct types
+            list_fields = ["symptoms", "past_medical_conditions", "medication_allergies", 
+                        "negative_findings", "critical_tests", "key_findings"]
+                        
+            for field in list_fields:
+                default_value = []
+                case_data[field] = ensure_safe_type(case_data.get(field, default_value), list, default_value, field)
+            
             # 2. Make sure pain is in symptoms if it's significant (>3/10)
             if "vitals" in case_data and "Pain" in case_data["vitals"]:
                 pain_score = 0
@@ -321,8 +506,8 @@ class EnhancedCaseGenerator(CaseGenerator):
                     pain_match = re.search(r'(\d+)', pain_text)
                     if pain_match:
                         pain_score = int(pain_match.group(1))
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Error parsing pain score: {str(e)}")
                     
                 # If pain is significant and not already in symptoms, add it
                 if pain_score > 3 and "symptoms" in case_data:
@@ -350,32 +535,38 @@ class EnhancedCaseGenerator(CaseGenerator):
                 vitals = case_data["vitals"]
                 
                 # Ensure BP has mmHg
-                if "BP" in vitals and "mmHg" not in vitals["BP"]:
+                if "BP" in vitals and isinstance(vitals["BP"], str) and "mmHg" not in vitals["BP"]:
                     vitals["BP"] = f"{vitals['BP']} mmHg"
                 
                 # Ensure HR has bpm
-                if "HR" in vitals and "bpm" not in vitals["HR"]:
+                if "HR" in vitals and isinstance(vitals["HR"], str) and "bpm" not in vitals["HR"]:
                     vitals["HR"] = f"{vitals['HR']} bpm"
                 
                 # Ensure RR has breaths/min
-                if "RR" in vitals and "breaths" not in vitals["RR"]:
+                if "RR" in vitals and isinstance(vitals["RR"], str) and "breaths" not in vitals["RR"]:
                     vitals["RR"] = f"{vitals['RR']} breaths/min"
                 
                 # Ensure Temp has °C or °F
-                if "Temp" in vitals and "°" not in vitals["Temp"]:
+                if "Temp" in vitals and isinstance(vitals["Temp"], str) and "°" not in vitals["Temp"]:
                     # Assume Celsius if value is low, Fahrenheit if high
-                    temp_value = float(vitals["Temp"].replace("°C", "").replace("°F", "").strip())
+                    temp_value = 0
+                    try:
+                        temp_value = float(vitals["Temp"].replace("°C", "").replace("°F", "").strip())
+                    except (ValueError, TypeError):
+                        # If conversion fails, use a default temperature
+                        temp_value = 37.0
+                        
                     if temp_value < 50:  # Likely Celsius
                         vitals["Temp"] = f"{temp_value} °C"
                     else:  # Likely Fahrenheit
                         vitals["Temp"] = f"{temp_value} °F"
-                    
+                        
                 # Ensure SpO2 has %
-                if "SpO2" in vitals and "%" not in vitals["SpO2"]:
+                if "SpO2" in vitals and isinstance(vitals["SpO2"], str) and "%" not in vitals["SpO2"]:
                     vitals["SpO2"] = f"{vitals['SpO2']}%"
                 
                 # Ensure Pain has /10 format if present
-                if "Pain" in vitals and "/10" not in vitals["Pain"]:
+                if "Pain" in vitals and isinstance(vitals["Pain"], str) and "/10" not in vitals["Pain"]:
                     vitals["Pain"] = f"{vitals['Pain']}/10"
                 
             logger.info(f"Successfully generated case: {case_data.get('diagnosis', 'Unknown diagnosis')}")
@@ -383,6 +574,8 @@ class EnhancedCaseGenerator(CaseGenerator):
                 
         except Exception as e:
             logger.error(f"Error in enhanced case generation: {str(e)}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             
             # Fallback to the original case generator if Perplexity fails
             logger.info("Falling back to original case generator due to error")

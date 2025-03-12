@@ -235,45 +235,109 @@ Use PubMed, medical journals, and clinical guidelines to ensure the physical exa
         """Extract symptoms from various possible formats in the case data"""
         symptoms = []
         
-        # Check for key_symptoms as a list
-        if "key_symptoms" in case and isinstance(case["key_symptoms"], list):
-            symptoms.extend(case["key_symptoms"])
+        # DEBUGGING: Log the case structure
+        logger.info(f"Extracting symptoms from case structure")
         
-        # Check for key_symptoms as a dictionary
-        elif "key_symptoms" in case and isinstance(case["key_symptoms"], dict):
-            for system, symptom in case["key_symptoms"].items():
-                if symptom and symptom != "None":
-                    symptoms.append(f"{symptom}")
+        # Check for key_symptoms as a list
+        if "key_symptoms" in case:
+            logger.info(f"key_symptoms type: {type(case['key_symptoms'])}")
+            if isinstance(case["key_symptoms"], list):
+                for item in case["key_symptoms"]:
+                    if isinstance(item, dict):
+                        # Handle dictionary format (with system/symptom structure)
+                        if "symptom" in item:
+                            symptoms.append(item["symptom"])
+                    elif isinstance(item, str):
+                        # Handle simple string format
+                        symptoms.append(item)
+                    elif isinstance(item, int):
+                        # Handle unexpected integer
+                        logger.warning(f"Found integer in key_symptoms: {item}. Converting to string.")
+                        symptoms.append(str(item))
+            elif isinstance(case["key_symptoms"], dict):
+                for system, symptom in case["key_symptoms"].items():
+                    if symptom and symptom != "None":
+                        if isinstance(symptom, str):
+                            symptoms.append(f"{symptom}")
+                        elif isinstance(symptom, int):
+                            logger.warning(f"Found integer symptom for {system}: {symptom}. Converting to string.")
+                            symptoms.append(str(symptom))
+            elif isinstance(case["key_symptoms"], int):
+                logger.warning(f"key_symptoms is an integer: {case['key_symptoms']}. Converting to string.")
+                symptoms.append(str(case["key_symptoms"]))
         
         # Check for symptoms in presentation
         if "presentation" in case:
             presentation = case["presentation"]
             
-            if "classic_symptoms" in presentation and isinstance(presentation["classic_symptoms"], list):
-                symptoms.extend(presentation["classic_symptoms"])
-                
-            if "description" in presentation and isinstance(presentation["description"], str):
-                symptoms.append(presentation["description"])
-                
+            if isinstance(presentation, dict):
+                if "classic_symptoms" in presentation:
+                    if isinstance(presentation["classic_symptoms"], list):
+                        for symptom in presentation["classic_symptoms"]:
+                            if isinstance(symptom, str):
+                                symptoms.append(symptom)
+                            elif isinstance(symptom, int):
+                                logger.warning(f"Found integer in classic_symptoms: {symptom}. Converting to string.")
+                                symptoms.append(str(symptom))
+                    elif isinstance(presentation["classic_symptoms"], str):
+                        symptoms.append(presentation["classic_symptoms"])
+                    elif isinstance(presentation["classic_symptoms"], int):
+                        logger.warning(f"classic_symptoms is an integer: {presentation['classic_symptoms']}. Converting to string.")
+                        symptoms.append(str(presentation["classic_symptoms"]))
+                    
+                if "description" in presentation and isinstance(presentation["description"], str):
+                    symptoms.append(presentation["description"])
+            elif isinstance(presentation, int):
+                logger.warning(f"presentation is an integer: {presentation}. Converting to string.")
+                symptoms.append(f"Presentation: {presentation}")
+                    
         # Check for atypical_presentation
         if "atypical_presentation" in case:
             atypical = case["atypical_presentation"]
-            if "description" in atypical and isinstance(atypical["description"], str):
-                symptoms.append(atypical["description"])
-                
+            if isinstance(atypical, dict):
+                if "description" in atypical and isinstance(atypical["description"], str):
+                    symptoms.append(atypical["description"])
+            elif isinstance(atypical, int):
+                logger.warning(f"atypical_presentation is an integer: {atypical}. Converting to string.")
+                symptoms.append(f"Atypical presentation: {atypical}")
+                    
         # Check condition description
-        if "condition" in case and isinstance(case["condition"], dict):
-            if "description" in case["condition"]:
-                symptoms.append(case["condition"]["description"])
-                
+        if "condition" in case:
+            condition = case["condition"]
+            if isinstance(condition, dict):
+                if "description" in condition:
+                    if isinstance(condition["description"], str):
+                        symptoms.append(condition["description"])
+                    elif isinstance(condition["description"], int):
+                        logger.warning(f"condition description is an integer: {condition['description']}. Converting to string.")
+                        symptoms.append(str(condition["description"]))
+            elif isinstance(condition, int):
+                logger.warning(f"condition is an integer: {condition}. Converting to string.")
+                symptoms.append(f"Condition: {condition}")
+                    
         # Check for symptoms as array directly in case
-        if "symptoms" in case and isinstance(case["symptoms"], list):
-            symptoms.extend(case["symptoms"])
-            
-        # Check presenting_complaint
-        if "presenting_complaint" in case and case["presenting_complaint"]:
-            symptoms.append(case["presenting_complaint"])
+        if "symptoms" in case:
+            if isinstance(case["symptoms"], list):
+                for symptom in case["symptoms"]:
+                    if isinstance(symptom, str):
+                        symptoms.append(symptom)
+                    elif isinstance(symptom, int):
+                        logger.warning(f"Found integer in symptoms: {symptom}. Converting to string.")
+                        symptoms.append(str(symptom))
+            elif isinstance(case["symptoms"], str):
+                symptoms.append(case["symptoms"])
+            elif isinstance(case["symptoms"], int):
+                logger.warning(f"symptoms is an integer: {case['symptoms']}. Converting to string.")
+                symptoms.append(str(case["symptoms"]))
                 
+        # Check presenting_complaint
+        if "presenting_complaint" in case:
+            if isinstance(case["presenting_complaint"], str) and case["presenting_complaint"]:
+                symptoms.append(case["presenting_complaint"])
+            elif isinstance(case["presenting_complaint"], int):
+                logger.warning(f"presenting_complaint is an integer: {case['presenting_complaint']}. Converting to string.")
+                symptoms.append(f"Presenting complaint: {case['presenting_complaint']}")
+                    
         # Deduplicate symptoms
         return list(set(symptoms))
 
