@@ -1,6 +1,5 @@
 import logging
-import os
-from flask import request, jsonify, Blueprint, send_from_directory
+from flask import request, jsonify, Blueprint
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -13,14 +12,13 @@ class APIRoutes:
     Defines and manages API routes for the application.
     """
     def __init__(self, case_manager, session_manager, chat_handler, 
-                lab_system=None, imaging_system=None, physical_exam_system=None, app = None):
+                lab_system=None, imaging_system=None, physical_exam_system=None):
         self.case_manager = case_manager
         self.session_manager = session_manager
         self.chat_handler = chat_handler
         self.lab_system = lab_system
         self.imaging_system = imaging_system
         self.physical_exam_system = physical_exam_system
-        self.app = app
         
     def register_routes(self, blueprint):
         """
@@ -137,11 +135,14 @@ class APIRoutes:
                     # Generate report
                     lab_results = self.lab_system.generate_report(current_case, [test_name])
                     
+                    # Generate markdown report for display
+                    markdown_report = self.lab_system.generate_markdown_report(lab_results)
+                    
                     return jsonify({
                         "success": True,
                         "message": f"Test '{test_name}' ordered successfully",
                         "results": lab_results,
-                        "result_id": lab_results.get("result_id")
+                        "markdown": markdown_report
                     })
                 else:
                     # Basic response if lab system not available
@@ -152,49 +153,6 @@ class APIRoutes:
                     })
             except Exception as e:
                 logger.error(f"Error ordering lab test: {str(e)}")
-                return jsonify({"error": str(e)}), 500
-                
-        # Generate lab PDF endpoint
-        @blueprint.route('/generate-lab-pdf', methods=['POST'])
-        def generate_lab_pdf():
-            try:
-                data = request.get_json()
-                if not data or 'result_id' not in data:
-                    return jsonify({"error": "No result ID provided"}), 400
-                    
-                result_id = data.get('result_id')
-                
-                # Get the lab results from the session manager
-                current_case = self.case_manager.get_current_case()
-                if not current_case:
-                    return jsonify({"error": "No active case"}), 404
-                    
-                # Find the lab result in the lab system
-                if not self.lab_system:
-                    return jsonify({"error": "Lab system not available"}), 500
-                    
-                # Get the report data from the lab system cache
-                for cache_key, report in self.lab_system.results_cache.items():
-                    if report.get('result_id') == result_id:
-                        lab_results = report
-                        break
-                else:
-                    return jsonify({"error": "Lab result not found"}), 404
-                
-                # Generate PDF
-                report_folder = self.app.config['REPORT_FOLDER'] if self.app else '/tmp/reports'
-                os.makedirs(report_folder, exist_ok=True)
-                output_filename = os.path.join(request.app.config['REPORT_FOLDER'], f"{result_id}.pdf")
-                self.lab_system.generate_pdf_report(lab_results, output_filename)
-                
-                # Return the PDF URL
-                return jsonify({
-                    "success": True,
-                    "pdf_url": f"/reports/{result_id}.pdf",
-                    "message": "PDF generated successfully"
-                })
-            except Exception as e:
-                logger.error(f"Error generating lab PDF: {str(e)}")
                 return jsonify({"error": str(e)}), 500
         
         # Order imaging endpoint
@@ -217,11 +175,14 @@ class APIRoutes:
                     current_case = self.case_manager.get_current_case()
                     imaging_report = self.imaging_system.generate_report(current_case, imaging_name)
                     
+                    # Generate markdown report for display
+                    markdown_report = self.imaging_system.generate_markdown_report(imaging_report)
+                    
                     return jsonify({
                         "success": True,
                         "message": f"Imaging study '{imaging_name}' ordered successfully",
                         "report": imaging_report,
-                        "report_id": imaging_report.get("report_id")
+                        "markdown": markdown_report
                     })
                 else:
                     # Basic response if imaging system not available
@@ -232,105 +193,6 @@ class APIRoutes:
                     })
             except Exception as e:
                 logger.error(f"Error ordering imaging: {str(e)}")
-                return jsonify({"error": str(e)}), 500
-                
-        # Generate imaging PDF endpoint
-        @blueprint.route('/generate-imaging-pdf', methods=['POST'])
-        def generate_imaging_pdf():
-            try:
-                data = request.get_json()
-                if not data or 'report_id' not in data:
-                    return jsonify({"error": "No report ID provided"}), 400
-                    
-                report_id = data.get('report_id')
-                
-                # Get the imaging report from the session manager
-                current_case = self.case_manager.get_current_case()
-                if not current_case:
-                    return jsonify({"error": "No active case"}), 404
-                    
-                # Find the imaging report in the imaging system
-                if not self.imaging_system:
-                    return jsonify({"error": "Imaging system not available"}), 500
-                    
-                # Get the report data from the imaging system cache
-                imaging_report = None
-                for cache_key, report in self.imaging_system.results_cache.items():
-                    if report.get('report_id') == report_id:
-                        imaging_report = report
-                        break
-                
-                if not imaging_report:
-                    return jsonify({"error": "Imaging report not found"}), 404
-                
-                # Generate PDF
-                from reportlab.lib import colors
-                from reportlab.lib.pagesizes import letter
-                from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-                from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-                from reportlab.lib.units import inch
-                
-                # Use the app reference stored in the class
-                report_folder = self.app.config['REPORT_FOLDER'] if self.app else '/tmp/reports'
-                os.makedirs(report_folder, exist_ok=True)
-                output_filename = os.path.join(report_folder, f"{report_id}.pdf")
-                
-                # Create the PDF document
-                doc = SimpleDocTemplate(
-                    output_filename,
-                    pagesize=letter,
-                    rightMargin=72, leftMargin=72,
-                    topMargin=72, bottomMargin=18
-                )
-                
-                # Define styles for the document
-                styles = getSampleStyleSheet()
-                styles.add(ParagraphStyle(name='CenterTitle', alignment=1, fontSize=18, spaceAfter=20))
-                styles.add(ParagraphStyle(name='Heading', fontSize=14, spaceAfter=10, textColor=colors.darkblue))
-                
-                elements = []
-                
-                # Title
-                title = Paragraph(f"Imaging Report: {imaging_report.get('modality', 'Unknown')}", styles['CenterTitle'])
-                elements.append(title)
-                
-                # Metadata
-                metadata_text = f"""
-                <b>Patient:</b> {imaging_report.get('patient_name', 'Unknown')}<br/>
-                <b>Patient ID:</b> {imaging_report.get('patient_id', 'Unknown')}<br/>
-                <b>Date/Time:</b> {imaging_report.get('timestamp', 'Unknown')}<br/>
-                <b>Radiologist:</b> {imaging_report.get('radiologist', 'Unknown')}
-                """
-                elements.append(Paragraph(metadata_text, styles["Normal"]))
-                elements.append(Spacer(1, 12))
-                
-                # Add report sections
-                sections = imaging_report.get('structured_sections', {})
-                for section, content in sections.items():
-                    if content:
-                        elements.append(Paragraph(f"<b>{section}</b>", styles['Heading']))
-                        elements.append(Paragraph(content, styles["Normal"]))
-                        elements.append(Spacer(1, 10))
-                
-                # If no structured sections, use the full report text
-                if not sections and 'report_text' in imaging_report:
-                    elements.append(Paragraph("Report:", styles['Heading']))
-                    report_paragraphs = imaging_report['report_text'].split('\n\n')
-                    for para in report_paragraphs:
-                        elements.append(Paragraph(para, styles["Normal"]))
-                        elements.append(Spacer(1, 6))
-                
-                # Build the PDF file
-                doc.build(elements)
-                
-                # Return the PDF URL
-                return jsonify({
-                    "success": True,
-                    "pdf_url": f"/reports/{report_id}.pdf",
-                    "message": "PDF generated successfully"
-                })
-            except Exception as e:
-                logger.error(f"Error generating imaging PDF: {str(e)}")
                 return jsonify({"error": str(e)}), 500
         
         # Physical examination endpoint

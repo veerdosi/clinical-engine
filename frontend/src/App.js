@@ -5,8 +5,7 @@ import DiagnosisPanel from './DiagnosisPanel';
 import TestOrderingPanel from './TestOrderingPanel';
 import PhysicalExamPanel from './PhysicalExamPanel';
 import CaseSelectionScreen from './CaseSelectionScreen';
-import VitalSigns from './VitalSigns';
-import './PdfViewer.css'; // Add this import
+import VitalSigns from './VitalSigns'; // Import the VitalSigns component
 import './App.css';
 
 function App() {
