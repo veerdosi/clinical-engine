@@ -12,7 +12,6 @@ const CaseSelectionScreen = ({ onCaseGenerated }) => {
   const specialties = [
     { value: "random", label: "Feeling Lucky? (Random Specialty)" },
     { value: "Internal Medicine", label: "Internal Medicine" },
-    { value: "Urology", label: "Urology" },
     { value: "Cardiology", label: "Cardiology" },
     { value: "Neurology", label: "Neurology" },
     { value: "Pulmonology", label: "Pulmonology" },

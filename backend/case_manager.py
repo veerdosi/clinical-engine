@@ -18,7 +18,7 @@ class CaseManager:
         self.current_case = None
         self.current_patient_agent = None
         self.diagnosis_evaluator = None
-        self.specialties = ["Internal Medicine", "Urology", "Cardiology", "Neurology", "Pulmonology", "Orthopedic"]
+        self.specialties = ["Internal Medicine", "Cardiology", "Neurology", "Pulmonology", "Orthopedic"]
         self.difficulties = ["Easy", "Moderate", "Hard"]
         
     def generate_new_case(self, specialty=None, difficulty=None):
