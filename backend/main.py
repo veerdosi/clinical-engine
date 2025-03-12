@@ -1,6 +1,8 @@
 import logging
 import traceback
-from flask import Flask
+import os
+import tempfile
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from backend.config import MedicalSimConfig
 from backend.case_manager import CaseManager
@@ -33,6 +35,16 @@ def create_app():
         logger.info("Initializing application configuration...")
         config = MedicalSimConfig()
         
+        # Create a temporary directory for PDF reports
+        app.config['REPORT_FOLDER'] = tempfile.mkdtemp()
+        os.makedirs(app.config['REPORT_FOLDER'], exist_ok=True)
+        logger.info(f"Report folder created at: {app.config['REPORT_FOLDER']}")
+        
+        # Add a route to serve PDF files
+        @app.route('/reports/<path:filename>')
+        def serve_report(filename):
+            return send_from_directory(app.config['REPORT_FOLDER'], filename)
+        
         # Initialize components
         logger.info("Initializing application components...")
         
@@ -61,7 +73,8 @@ def create_app():
             chat_handler=chat_handler,
             lab_system=lab_system,
             imaging_system=imaging_system,
-            physical_exam_system=physical_exam_system
+            physical_exam_system=physical_exam_system,
+            app=app  # Pass the app reference to APIRoutes
         )
         
         # Register routes

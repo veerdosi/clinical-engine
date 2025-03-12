@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PdfViewer from './PdfViewer';
 import './TestOrderingPanel.css';
 
 const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
@@ -9,6 +10,7 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
   const [testResults, setTestResults] = useState(null);
   const [error, setError] = useState(null);
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
 
   // Effect to set the tab based on forceTabType prop
   useEffect(() => {
@@ -20,6 +22,7 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
       setShowCustomInput(false);
       setTestResults(null);
       setError(null);
+      setShowPdfViewer(false);
     }
   }, [forceTabType]);
 
@@ -98,6 +101,7 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
     }
     setTestResults(null);
     setError(null);
+    setShowPdfViewer(false);
   };
 
   const handleCustomTestChange = (e) => {
@@ -157,6 +161,11 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
     }
   };
 
+  // Handle viewing the PDF report
+  const handleViewPdf = () => {
+    setShowPdfViewer(true);
+  };
+
   // Get appropriate labels based on the tab
   const getLabels = () => {
     switch (selectedTab) {
@@ -204,6 +213,7 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
           setCustomTest('');
           setShowCustomInput(false);
           setTestResults(null);
+          setShowPdfViewer(false);
         }}
         disabled={isDisabled}
       >
@@ -217,6 +227,7 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
           setCustomTest('');
           setShowCustomInput(false);
           setTestResults(null);
+          setShowPdfViewer(false);
         }}
         disabled={isDisabled}
       >
@@ -224,6 +235,21 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
       </button>
     </div>
   );
+
+  // Determine if we have a valid reportId for PDF generation
+  const getReportId = () => {
+    if (!testResults) return null;
+    
+    if (selectedTab === 'lab' && testResults.result_id) {
+      return testResults.result_id;
+    }
+    
+    if ((selectedTab === 'imaging' || selectedTab === 'procedure') && testResults.report_id) {
+      return testResults.report_id;
+    }
+    
+    return null;
+  };
 
   return (
     <div className={`test-ordering-panel ${forceTabType ? 'full-width' : ''}`}>
@@ -289,7 +315,17 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
       
       {testResults && (
         <div className="test-results">
-          <h4>Results:</h4>
+          <div className="result-header">
+            <h4>Results:</h4>
+            {getReportId() && (
+              <button 
+                className="view-pdf-btn"
+                onClick={handleViewPdf}
+              >
+                View PDF Report
+              </button>
+            )}
+          </div>
           <div 
             className="result-content"
             dangerouslySetInnerHTML={{ 
@@ -299,6 +335,15 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
             }} 
           />
         </div>
+      )}
+      
+      {/* PDF Viewer Modal */}
+      {showPdfViewer && getReportId() && (
+        <PdfViewer 
+          reportId={getReportId()} 
+          reportType={selectedTab === 'lab' ? 'lab' : 'imaging'}
+          onClose={() => setShowPdfViewer(false)}
+        />
       )}
     </div>
   );

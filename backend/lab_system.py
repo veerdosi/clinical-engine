@@ -1045,75 +1045,142 @@ Return a JSON object with exactly this format:
     
     def generate_pdf_report(self, lab_results: dict, output_filename: str = "lab_report.pdf") -> None:
         """
-        Generate a PDF report from structured lab results with amazing formatting,
-        excluding the interpretation section.
+        Generate a PDF report from structured lab results with enhanced formatting.
+        
+        Args:
+            lab_results: The lab results data structure
+            output_filename: Path to save the PDF file
         """
-        # Create the PDF document
-        doc = SimpleDocTemplate(
-            output_filename,
-            pagesize=letter,
-            rightMargin=72, leftMargin=72,
-            topMargin=72, bottomMargin=18
-        )
-        
-        # Define styles for the document
-        styles = getSampleStyleSheet()
-        styles.add(ParagraphStyle(name='CenterTitle', alignment=1, fontSize=18, spaceAfter=20))
-        styles.add(ParagraphStyle(name='Heading', fontSize=14, spaceAfter=10, textColor=colors.darkblue))
-        
-        elements = []
-        
-        # Title
-        title = Paragraph("Laboratory Results", styles['CenterTitle'])
-        elements.append(title)
-        
-        # Metadata: Case ID, Ordered By, Date/Time
-        metadata_text = f"""
-        <b>Case ID:</b> {lab_results.get('case_id', 'Unknown')}<br/>
-        <b>Ordered By:</b> {lab_results.get('ordered_by', 'Unknown')}<br/>
-        <b>Date/Time:</b> {lab_results.get('timestamp', 'Unknown')}
-        """
-        elements.append(Paragraph(metadata_text, styles["Normal"]))
-        elements.append(Spacer(1, 12))
-        
-        # Critical values section, if any
-        critical_values = lab_results.get('critical_values', [])
-        if critical_values:
-            elements.append(Paragraph("⚠️ Critical Values", styles['Heading']))
-            for crit in critical_values:
-                crit_text = f"<b>{crit['test']}:</b> {crit['value']} {crit['units']} (Threshold: {crit['threshold']})"
-                elements.append(Paragraph(crit_text, styles["Normal"]))
-            elements.append(Spacer(1, 12))
-        
-        # Create table data for test results
-        table_data = [["Test", "Result", "Flag", "Reference Range", "Units"]]
-        for result in lab_results.get("results", []):
-            test_name = result.get("test_name", "Unknown")
-            value = result.get("result", "N/A")
-            flag = result.get("flag", "")
-            reference = result.get("reference_range", "")
-            units = result.get("units", "")
+        try:
+            # Create the PDF document
+            doc = SimpleDocTemplate(
+                output_filename,
+                pagesize=letter,
+                rightMargin=72, leftMargin=72,
+                topMargin=72, bottomMargin=18
+            )
             
-            # Emphasize abnormal values
-            if flag:
-                test_name = f"<b>{test_name}</b>"
-                value = f"<b>{value}</b>"
-                flag = f"<b>{flag}</b>"
-            table_data.append([test_name, value, flag, reference, units])
-        
-        # Build table with formatting
-        table = Table(table_data, colWidths=[1.5*inch]*5)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.lightblue),
-            ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0,0), (-1,0), 12),
-            ('BOTTOMPADDING', (0,0), (-1,0), 12),
-            ('BACKGROUND', (0,1), (-1,-1), colors.beige),
-            ('GRID', (0,0), (-1,-1), 1, colors.black)
-        ]))
-        elements.append(table)
-        
-        # Build the PDF file
-        doc.build(elements)
+            # Define styles for the document
+            styles = getSampleStyleSheet()
+            styles.add(ParagraphStyle(name='CenterTitle', alignment=1, fontSize=18, spaceAfter=20))
+            styles.add(ParagraphStyle(name='Heading', fontSize=14, spaceAfter=10, textColor=colors.darkblue))
+            
+            elements = []
+            
+            # Title
+            title = Paragraph("Laboratory Results", styles['CenterTitle'])
+            elements.append(title)
+            
+            # Metadata: Case ID, Ordered By, Date/Time
+            timestamp = lab_results.get('timestamp', 'Unknown')
+            if isinstance(timestamp, str):
+                try:
+                    # Try to format the timestamp if it's an ISO string
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(timestamp)
+                    formatted_time = dt.strftime("%B %d, %Y %I:%M %p")
+                except (ValueError, TypeError):
+                    formatted_time = timestamp
+            else:
+                formatted_time = str(timestamp)
+                
+            metadata_text = f"""
+            <b>Case ID:</b> {lab_results.get('case_id', 'Unknown')}<br/>
+            <b>Ordered By:</b> {lab_results.get('ordered_by', 'Unknown')}<br/>
+            <b>Date/Time:</b> {formatted_time}
+            """
+            elements.append(Paragraph(metadata_text, styles["Normal"]))
+            elements.append(Spacer(1, 12))
+            
+            # Critical values section, if any
+            critical_values = lab_results.get('critical_values', [])
+            if critical_values:
+                elements.append(Paragraph("⚠️ Critical Values", styles['Heading']))
+                for crit in critical_values:
+                    if isinstance(crit, dict):
+                        crit_text = f"<b>{crit.get('test', 'Unknown')}:</b> {crit.get('value', 'Unknown')} {crit.get('units', '')} (Threshold: {crit.get('threshold', 'Unknown')})"
+                        elements.append(Paragraph(crit_text, styles["Normal"]))
+                elements.append(Spacer(1, 12))
+            
+            # Create table data for test results
+            results = lab_results.get("results", [])
+            if results:
+                table_data = [["Test", "Result", "Flag", "Reference Range", "Units"]]
+                
+                for result in results:
+                    if not isinstance(result, dict):
+                        continue
+                        
+                    test_name = result.get("test_name", "Unknown")
+                    value = result.get("result", "N/A")
+                    flag = result.get("flag", "")
+                    reference = result.get("reference_range", "")
+                    units = result.get("units", "")
+                    
+                    # Convert to strings and ensure proper type
+                    test_name = str(test_name)
+                    value = str(value)
+                    flag = str(flag)
+                    reference = str(reference) 
+                    units = str(units)
+                    
+                    # Emphasize abnormal values
+                    if flag:
+                        test_name = f"<b>{test_name}</b>"
+                        value = f"<b>{value}</b>"
+                        flag = f"<b>{flag}</b>"
+                    
+                    table_data.append([
+                        Paragraph(test_name, styles["Normal"]),
+                        Paragraph(value, styles["Normal"]),
+                        Paragraph(flag, styles["Normal"]),
+                        Paragraph(reference, styles["Normal"]),
+                        Paragraph(units, styles["Normal"])
+                    ])
+                
+                # Calculate column widths proportionally
+                col_widths = [2*inch, 1.25*inch, 0.5*inch, 1.75*inch, 1*inch]
+                
+                # Build table with formatting
+                table = Table(table_data, colWidths=col_widths)
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0,0), (-1,0), colors.lightblue),
+                    ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                    ('ALIGN', (0,0), (-1,0), 'CENTER'),
+                    ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0,0), (-1,0), 12),
+                    ('BOTTOMPADDING', (0,0), (-1,0), 12),
+                    ('BACKGROUND', (0,1), (-1,-1), colors.beige),
+                    ('GRID', (0,0), (-1,-1), 1, colors.black),
+                    ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                    ('ALIGN', (1,1), (1,-1), 'RIGHT'),
+                    ('ALIGN', (2,1), (2,-1), 'CENTER'),
+                ]))
+                elements.append(table)
+            
+            # Add interpretation if available
+            interpretation = lab_results.get('interpretation')
+            if interpretation:
+                elements.append(Spacer(1, 20))
+                elements.append(Paragraph("Interpretation", styles['Heading']))
+                elements.append(Paragraph(interpretation, styles["Normal"]))
+            
+            # Build the PDF file
+            doc.build(elements)
+            
+            return output_filename
+        except Exception as e:
+            logger.error(f"Error generating PDF report: {str(e)}")
+            # Create a simple error PDF 
+            try:
+                doc = SimpleDocTemplate(
+                    output_filename,
+                    pagesize=letter
+                )
+                elements = []
+                elements.append(Paragraph("Lab Report - Error", getSampleStyleSheet()['Title']))
+                elements.append(Paragraph(f"An error occurred while generating this report: {str(e)}", 
+                                        getSampleStyleSheet()['Normal']))
+                doc.build(elements)
+            except:
+                logger.critical("Failed to create even an error PDF")

@@ -1,68 +1,116 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import './PdfViewer.css';
 
-const PdfViewer = ({ pdfUrl }) => {
-  const [viewerType, setViewerType] = useState('iframe');
-  
-  if (!pdfUrl) return null;
+const PdfViewer = ({ reportId, reportType, onClose }) => {
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Remove any leading slash and add the backend URL
-  const cleanUrl = pdfUrl.replace(/^\//, '');
-  // const fullUrl = `http://localhost:5000/${cleanUrl}`;
-  const urlWithTimestamp = `${cleanUrl}?t=${new Date().getTime()}`;
+  useEffect(() => {
+    if (!reportId || !reportType) return;
+    
+    const fetchPdf = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Determine which API endpoint to use based on report type
+        const endpoint = reportType === 'lab' 
+          ? '/api/generate-lab-pdf'
+          : '/api/generate-imaging-pdf';
+        
+        // Create the appropriate request body based on report type
+        const requestBody = reportType === 'lab'
+          ? { result_id: reportId }
+          : { report_id: reportId };
+        
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to generate PDF');
+        }
+        
+        const data = await response.json();
+        
+        if (!data.pdf_url) {
+          throw new Error('No PDF URL returned from server');
+        }
+        
+        // Add a timestamp to prevent caching
+        setPdfUrl(`${data.pdf_url}?t=${new Date().getTime()}`);
+      } catch (err) {
+        console.error('Error generating PDF:', err);
+        setError(err.message || 'Failed to generate PDF');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPdf();
+  }, [reportId, reportType]);
 
-  const renderViewer = () => {
-    switch (viewerType) {
-      case 'iframe':
-        return (
-          <iframe
-            src={urlWithTimestamp}
-            title="Lab Report PDF"
-            width="100%"
-            height="100%"
-            style={{ border: '1px solid #ccc' }}
-          />
-        );
-      case 'embed':
-        return (
-          <embed
-            src={urlWithTimestamp}
-            type="application/pdf"
-            width="100%"
-            height="100%"
-          />
-        );
-      case 'object':
-        return (
-          <object
-            data={urlWithTimestamp}
-            type="application/pdf"
-            width="100%"
-            height="100%"
-          >
-            <p>PDF cannot be displayed</p>
-          </object>
-        );
-      default:
-        return null;
-    }
-  };
+  if (loading) {
+    return (
+      <div className="pdf-viewer">
+        <div className="pdf-viewer-header">
+          <h3>Generating PDF Report</h3>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="pdf-loading">
+          <div className="pdf-loading-spinner"></div>
+          <p>Generating PDF report...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="pdf-viewer">
+        <div className="pdf-viewer-header">
+          <h3>Error</h3>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="pdf-error">
+          <p>Error generating PDF: {error}</p>
+          <button onClick={onClose}>Close</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!pdfUrl) {
+    return null;
+  }
 
   return (
-    <div style={{ width: '100%', height: '600px' }}>
-      <div style={{ marginBottom: '10px' }}>
-        <button onClick={() => setViewerType('iframe')}>Try iframe</button>
-        <button onClick={() => setViewerType('embed')}>Try embed</button>
-        <button onClick={() => setViewerType('object')}>Try object</button>
-        <a 
-          href={urlWithTimestamp}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ marginLeft: '10px' }}
-        >
-          Open PDF in new tab
-        </a>
+    <div className="pdf-viewer">
+      <div className="pdf-viewer-header">
+        <h3>{reportType === 'lab' ? 'Laboratory Report' : 'Imaging Report'}</h3>
+        <div className="pdf-viewer-actions">
+          <a 
+            href={pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="open-new-tab-btn"
+          >
+            Open in New Tab
+          </a>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
       </div>
-      {renderViewer()}
+      <div className="pdf-frame-container">
+        <iframe
+          src={pdfUrl}
+          title={`${reportType === 'lab' ? 'Lab' : 'Imaging'} Report PDF`}
+          className="pdf-frame"
+        />
+      </div>
     </div>
   );
 };
