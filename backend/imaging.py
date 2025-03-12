@@ -4,12 +4,17 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 from openai import Client
 
+import os
+import requests
+import io
+from PIL import Image
+
 logger = logging.getLogger(__name__)
 
 class ImagingSystem:
     """
     System for generating radiology reports based on imaging studies ordered.
-    Provides detailed, realistic text reports without generating actual images.
+    Provides detailed, realistic text reports.
     """
     def __init__(self, config):
         self.config = config
@@ -330,53 +335,90 @@ IMPRESSION:
             md_report += report_info.get("report_text", "No report available.")
             
         return md_report
-
-    def generate_imaging_prompt(case: Dict[str, Any], modality: str, config) -> Dict[str, Any]:
+    
+    def generate_image_prompt(self, case: Dict[str, Any], modality: str) -> str:
         """
-        Generates a natural language prompt for radiology report generation.
-        This is a legacy function maintained for compatibility.
+        Generate a concise prompt for an image model based on the case and imaging modality.
+        Limited to approximately 77 tokens to fit API requirements.
         
         Args:
-            case: Patient case information
-            modality: Requested imaging modality
-            config: Configuration object
+            case: The patient case information
+            modality: The requested imaging modality
             
         Returns:
-            Dict with parameters for report generation
+            A string prompt for the image generation model
         """
-        system_prompt = f"""You are a radiologist assistant. Create imaging reports for:
-    Patient Case: {json.dumps(case)}
-    Modality: {modality}
-
-    Create a natural language description of radiological findings that would be 
-    consistent with this case. Focus on what would be visible in this imaging modality
-    for a patient with the given symptoms and likely diagnosis.
-
-    Example output:
-    {{
-        "clinical_indication": "45yo male with chest pain",
-        "findings_description": "PA chest X-ray showing left lower lobe consolidation with air bronchograms, consistent with pneumonia.",
-        "diagnostic_hints": ["Pneumonia", "Pulmonary edema"]
-    }}"""
+        # Get modality information
+        modality_info = self.imaging_modalities.get(modality, {
+            "name": modality,
+            "description": f"{modality} imaging study"
+        })
         
-        try:
-            client = Client(api_key=config.openai_api_key)
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Generate standard imaging study for {modality}"}
-                ],
-                temperature=0.4,
-                response_format={"type": "json_object"}
-            )
+        # Extract key clinical information
+        diagnosis = case.get('diagnosis', '').lower()
+        complaint = case.get('presenting_complaint', '').lower()
+        
+        # Map modality to appropriate image type
+        modality_name = modality_info["name"]
+        
+        # For X-ray types, specify view
+        view_spec = ""
+        if modality == "CXR":
+            view_spec = "PA and lateral view"
+        elif "X-ray" in modality:
+            # For other X-rays, determine appropriate view based on case
+            body_part = modality.replace("X-ray", "").strip()
+            view_spec = f"{body_part} view"
+        
+        # Generate a concise, focused prompt
+        prompt = f"Generate {modality_name} {view_spec} showing {diagnosis if diagnosis else complaint}. Medical imaging, realistic."
+        
+        # Truncate if necessary to ensure token limit
+        if len(prompt.split()) > 20:  # Rough approximation of 77 tokens
+            prompt = " ".join(prompt.split()[:20])
+        
+        return prompt
+    
+    def call_image_api(self, prompt: str, save_path: Optional[str] = None) -> Optional[Image.Image]:
+        """
+        Call the remote text-to-image API with a prompt and return the generated image.
+        
+        Args:
+            prompt: The text prompt to generate an image from
+            save_path: Optional path to save the image to
             
-            imaging_data = json.loads(response.choices[0].message.content)
-            return imaging_data
+        Returns:
+            PIL Image object or None if the request failed
+        """
+        try:
+            # Replace with your remote server IP address
+            api_url = "http://10.96.176.246:5000/generate"
+            
+            # Prepare the request
+            headers = {"Content-Type": "application/json"}
+            data = {"prompt": prompt}
+            
+            # Send the request
+            response = requests.post(api_url, json=data, headers=headers, timeout=30)
+            
+            # Check if the request was successful
+            if response.status_code == 200:
+                # Convert the response content to an image
+                image = Image.open(io.BytesIO(response.content))
+                
+                # Save the image if a path was provided
+                if save_path:
+                    # Ensure directory exists
+                    os.makedirs(os.path.dirname(save_path) if os.path.dirname(save_path) else '.', exist_ok=True)
+                    image.save(save_path)
+                    print(f"Image saved to {save_path}")
+                    
+                return image
+            else:
+                print(f"API request failed with status code {response.status_code}")
+                print(f"Response: {response.text}")
+                return None
+                
         except Exception as e:
-            logger.error(f"Error generating imaging prompt: {str(e)}")
-            return {
-                "clinical_indication": case.get("presenting_complaint", "Unknown"),
-                "findings_description": f"Standard {modality} with no significant abnormalities.",
-                "diagnostic_hints": [case.get("diagnosis", "Unknown")]
-            }
+            print(f"Error calling image API: {str(e)}")
+            return None

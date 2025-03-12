@@ -1,6 +1,11 @@
 import logging
 from flask import request, jsonify, Blueprint
 from datetime import datetime
+from PIL import Image
+import requests
+import io
+import os
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +157,6 @@ class APIRoutes:
                 logger.error(f"Error ordering lab test: {str(e)}")
                 return jsonify({"error": str(e)}), 500
         
-        # Order imaging endpoint
         @blueprint.route('/order-imaging', methods=['POST'])
         def order_imaging():
             try:
@@ -171,15 +175,41 @@ class APIRoutes:
                 if self.imaging_system:
                     current_case = self.case_manager.get_current_case()
                     imaging_report = self.imaging_system.generate_report(current_case, imaging_name)
-                    
+
                     # Generate markdown report for display
                     markdown_report = self.imaging_system.generate_markdown_report(imaging_report)
+                    
+                    # Generate image prompt
+                    image_prompt = self.imaging_system.generate_image_prompt(current_case, imaging_name)
+                    
+                    # Define path to save the generated image
+                    image_filename = f"{imaging_name.replace(' ', '_').lower()}_{int(time.time())}.png"
+                    image_dir = os.path.join("static", "generated_images")
+                    os.makedirs(image_dir, exist_ok=True)
+                    image_path = os.path.join(image_dir, image_filename)
+                    
+                    # Generate and save the image
+                    image_success = False
+                    image_url = None
+                    
+                    try:
+                        # Call the image API and save the result
+                        image = self.imaging_system.call_image_api(image_prompt, image_path)
+                        if image:
+                            image_success = True
+                            # Create URL path for the image (relative to your static folder)
+                            image_url = f"/static/generated_images/{image_filename}"
+                    except Exception as img_err:
+                        logger.error(f"Error generating image: {str(img_err)}")
                     
                     return jsonify({
                         "success": True,
                         "message": f"Imaging study '{imaging_name}' ordered successfully",
                         "report": imaging_report,
-                        "markdown": markdown_report
+                        "markdown": markdown_report,
+                        "image_generated": image_success,
+                        "image_url": image_url,
+                        "image_prompt": image_prompt  # Optional: include the prompt for debugging
                     })
                 else:
                     # Basic response if imaging system not available
