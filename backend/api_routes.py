@@ -289,7 +289,7 @@ class APIRoutes:
                         "markdown": markdown_report,
                         "image_generated": image_success,
                         "image_url": image_url,
-                        "image_prompt": image_prompt  # Optional: include the prompt for debugging
+                        # "image_prompt": image_prompt  # Optional: include the prompt for debugging
                     })
                 else:
                     # Basic response if imaging system not available

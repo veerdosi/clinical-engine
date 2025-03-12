@@ -337,6 +337,15 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
           ) : (
             <p>{testResults.message || 'Test results received.'}</p>
           )}
+          {testResults.image_url && (
+            <div className="imaging-result-image">
+              <h4>Imaging Result:</h4>
+              <img 
+                src={testResults.image_url} 
+                alt={`${testResults.message || 'Imaging result'}`} 
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
