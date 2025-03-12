@@ -139,7 +139,18 @@ class APIRoutes:
                     logger.warning("Session manager missing get_verified_exam_procedures method. Using empty list.")
                     verified_procedures = []
                 
-                # Evaluate the diagnosis with physical exams, verified procedures, and notes included
+                # Record diagnosis submission timestamp
+                self.session_manager.record_diagnosis_submission(student_diagnosis)
+                
+                # Get timestamp data for evaluation
+                timeline = self.session_manager.get_session_timeline()
+                efficiency_metrics = self.session_manager.get_efficiency_metrics()
+                timestamp_data = {
+                    "timeline": timeline,
+                    "efficiency_metrics": efficiency_metrics
+                }
+                
+                # Evaluate the diagnosis with all available data
                 evaluation_result = evaluator.evaluate(
                     student_diagnosis,
                     self.session_manager.get_ordered_tests(),
@@ -147,7 +158,8 @@ class APIRoutes:
                     self.session_manager.get_patient_interactions(),
                     self.session_manager.get_physical_exams(),
                     verified_procedures,
-                    notes  # Include notes in evaluation
+                    notes,
+                    timestamp_data  # New parameter
                 )
                 
                 return jsonify(evaluation_result)

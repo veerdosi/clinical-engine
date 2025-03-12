@@ -6,7 +6,8 @@ import TestOrderingPanel from './TestOrderingPanel';
 import PhysicalExamPanel from './PhysicalExamPanel';
 import CaseSelectionScreen from './CaseSelectionScreen';
 import VitalSigns from './VitalSigns';
-import NotesPanel from './NotesPanel'; // Import the NotesPanel component
+import NotesPanel from './NotesPanel';
+import InactivityReminder from './InactivityReminder';
 import './App.css';
 
 function App() {
@@ -18,7 +19,7 @@ function App() {
   const [showCaseSelection, setShowCaseSelection] = useState(true); // Start with case selection
   const [activeTab, setActiveTab] = useState('patient'); // Default to patient tab
   const [notes, setNotes] = useState({}); // Add state for notes
-
+ 
   // We'll keep this to handle case loading on initial visit, but we'll show the selection screen
   useEffect(() => {
     if (!showCaseSelection) {
@@ -169,6 +170,32 @@ function App() {
     );
   }
 
+  const getCaseUrgency = () => {
+    if (!caseInfo) return 'medium';
+    const difficulty = caseInfo.difficulty?.toLowerCase() || '';
+    if (difficulty === 'hard') {
+      return 'high';
+    } else if (difficulty === 'moderate') {
+      return 'medium';
+    }
+    
+    return 'low';
+  };
+
+  const getInactivityThreshold = () => {
+    const urgency = getCaseUrgency();
+    switch (urgency) {
+      case 'high':
+        return 60; // 1 minute for urgent cases
+      case 'medium':
+        return 120; // 2 minutes for moderate cases
+      case 'low':
+        return 180; // 3 minutes for low urgency cases
+      default:
+        return 120; // Default to 2 minutes
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -237,6 +264,11 @@ function App() {
               <VitalSigns vitals={caseInfo?.vitals || {}} />
             </div>
             
+          {/* Add the InactivityReminder component only when a case is active */}
+          {caseInfo && !showCaseSelection && !isDiagnosisSubmitted && (
+        <InactivityReminder inactivityThreshold={getInactivityThreshold()} />
+          )}
+
             <div className="patient-grid-layout">
               {/* Left column: Chat */}
               <div className="chat-area">

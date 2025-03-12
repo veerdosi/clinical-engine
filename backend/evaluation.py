@@ -5,6 +5,221 @@ from typing import List, Set, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
+class TimestampEvaluator:
+    """
+    Evaluates student performance based on timestamps and action sequence.
+    """
+    def __init__(self, config):
+        self.config = config
+        self.client = Client(api_key=config.openai_api_key)
+    
+    def evaluate_timestamps(self, 
+                          timeline: List[Dict[str, Any]], 
+                          efficiency_metrics: Dict[str, Any],
+                          case_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Evaluates the student's clinical workflow based on timestamps.
+        
+        Args:
+            timeline: List of timestamped activities
+            efficiency_metrics: Pre-calculated efficiency metrics
+            case_info: Information about the current case
+            
+        Returns:
+            Dict containing timestamp-based evaluation results
+        """
+        # Extract diagnosis and other case details
+        diagnosis = case_info.get("diagnosis", case_info.get("expected_diagnosis", "Unknown"))
+        specialty = case_info.get("specialty", "Unknown")
+        urgency_level = self._determine_case_urgency(case_info)
+        
+        # Create a prompt for LLM evaluation
+        system_prompt = f"""You are a medical education expert evaluating a student's clinical workflow efficiency based on their timestamp data.
+
+Case Information:
+- Diagnosis: {diagnosis}
+- Specialty: {specialty}
+- Urgency Level: {urgency_level}
+
+The student's workflow timeline has been analyzed, and you have access to their activity sequence and timing metrics.
+
+Evaluate the following aspects:
+1. Workflow efficiency: Was time used effectively? Were there long idle periods?
+2. Appropriate prioritization: Were urgent tests/exams performed first?
+3. Logical progression: Did the workflow follow a sensible clinical approach?
+4. Adherence to guidelines: Did the sequence align with standard clinical protocols?
+5. Recognition of time-sensitivity: For urgent cases, was time managed appropriately?
+
+Generate a comprehensive evaluation as a JSON object with:
+- efficiency_score: int (1-10)
+- prioritization_score: int (1-10) 
+- logical_progression_score: int (1-10)
+- guideline_adherence_score: int (1-10)
+- time_sensitivity_score: int (1-10)
+- overall_workflow_score: int (1-10)
+- strengths: array of strings
+- areas_for_improvement: array of strings
+- feedback: string with assessment and advice
+"""
+        
+        # Format timeline data for the prompt
+        formatted_timeline = self._format_timeline_for_prompt(timeline)
+        formatted_metrics = self._format_metrics_for_prompt(efficiency_metrics)
+        
+        try:
+            # Call LLM for evaluation
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",  # Use appropriate model
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Timeline data:\n{formatted_timeline}\n\nEfficiency metrics:\n{formatted_metrics}"}
+                ],
+                temperature=0.3,
+                response_format={"type": "json_object"}
+            )
+            
+            # Parse the response
+            evaluation = json.loads(response.choices[0].message.content)
+            
+            # Add raw metrics to the evaluation
+            evaluation["timeline_data"] = timeline
+            evaluation["efficiency_metrics_raw"] = efficiency_metrics
+            
+            return evaluation
+            
+        except Exception as e:
+            logger.error(f"Error in timestamp evaluation: {str(e)}")
+            # Return a basic evaluation if LLM fails
+            return {
+                "efficiency_score": 5,
+                "prioritization_score": 5,
+                "logical_progression_score": 5,
+                "guideline_adherence_score": 5,
+                "time_sensitivity_score": 5,
+                "overall_workflow_score": 5,
+                "strengths": ["Unable to fully evaluate workflow due to technical error."],
+                "areas_for_improvement": ["Unable to provide specific improvement areas due to evaluation error."],
+                "feedback": "Due to a technical error, the system couldn't fully analyze your clinical workflow timing. General best practices include prioritizing critical tests, following a logical diagnostic sequence, and managing time efficiently based on case urgency.",
+                "timeline_data": timeline,
+                "efficiency_metrics_raw": efficiency_metrics
+            }
+    
+    def _determine_case_urgency(self, case_info: Dict[str, Any]) -> str:
+        """
+        Determines the urgency level of a case based on diagnosis and symptoms.
+        
+        Args:
+            case_info: Information about the case
+            
+        Returns:
+            str: Urgency level (High, Medium, Low)
+        """
+        # List of conditions typically considered urgent or emergent
+        urgent_conditions = [
+            "myocardial infarction", "heart attack", "stroke", "pulmonary embolism",
+            "aortic dissection", "sepsis", "meningitis", "appendicitis", "aneurysm",
+            "tension pneumothorax", "cardiac arrest", "severe trauma", "hemorrhage",
+            "overdose", "anaphylaxis", "status epilepticus", "diabetic ketoacidosis"
+        ]
+        
+        # Get case details
+        diagnosis = case_info.get("diagnosis", 
+                             case_info.get("expected_diagnosis", "")).lower()
+        
+        # Get symptoms if available
+        symptoms = []
+        if "symptoms" in case_info and isinstance(case_info["symptoms"], list):
+            symptoms = [s.lower() if isinstance(s, str) else "" for s in case_info["symptoms"]]
+        
+        # Check for urgent keywords in diagnosis
+        for condition in urgent_conditions:
+            if condition in diagnosis:
+                return "High"
+                
+        # Check for urgent symptoms
+        urgent_symptom_keywords = [
+            "severe", "intense", "acute", "sudden", "extreme", "unbearable",
+            "crushing", "worst", "cannot", "unable"
+        ]
+        
+        for symptom in symptoms:
+            for keyword in urgent_symptom_keywords:
+                if keyword in symptom:
+                    return "High"
+        
+        # Check for moderate urgency based on specialty and presenting complaint
+        specialty = case_info.get("specialty", "").lower()
+        presenting_complaint = case_info.get("presenting_complaint", "").lower()
+        
+        moderately_urgent_specialties = ["cardiology", "neurology", "emergency"]
+        if any(spec in specialty for spec in moderately_urgent_specialties):
+            return "Medium"
+            
+        # Default to low urgency if no urgent indicators found
+        return "Low"
+    
+    def _format_timeline_for_prompt(self, timeline: List[Dict[str, Any]]) -> str:
+        """
+        Formats the timeline data into a readable string for the prompt.
+        
+        Args:
+            timeline: List of timestamped activities
+            
+        Returns:
+            str: Formatted timeline string
+        """
+        if not timeline:
+            return "No timeline data available."
+        
+        formatted_entries = []
+        for i, entry in enumerate(sorted(timeline, key=lambda x: x["timestamp"])):
+            time_str = f"{entry.get('time_since_start', 0):.1f}s"
+            activity = entry.get("activity_type", "unknown")
+            description = entry.get("description", "")
+            
+            formatted_entries.append(f"{i+1}. [{time_str}] {activity.upper()}: {description}")
+        
+        return "\n".join(formatted_entries)
+    
+    def _format_metrics_for_prompt(self, metrics: Dict[str, Any]) -> str:
+        """
+        Formats the efficiency metrics into a readable string for the prompt.
+        
+        Args:
+            metrics: Efficiency metrics dictionary
+            
+        Returns:
+            str: Formatted metrics string
+        """
+        formatted_lines = []
+        
+        # Format durations
+        for key, value in metrics.items():
+            if key.endswith("_seconds") and value is not None:
+                # Convert seconds to a more readable format
+                minutes, seconds = divmod(int(value), 60)
+                hours, minutes = divmod(minutes, 60)
+                
+                if hours > 0:
+                    time_str = f"{hours}h {minutes}m {seconds}s"
+                elif minutes > 0:
+                    time_str = f"{minutes}m {seconds}s"
+                else:
+                    time_str = f"{seconds}s"
+                
+                # Format the key name to be more readable
+                readable_key = key.replace("_seconds", "").replace("_", " ").title()
+                formatted_lines.append(f"{readable_key}: {time_str}")
+            elif key == "idle_periods_count":
+                formatted_lines.append(f"Idle Periods: {value}")
+            elif key == "critical_tests_ordered":
+                formatted_lines.append(f"Critical Tests Ordered: {value}")
+            elif key == "critical_test_ordering_sequence" and value:
+                sequence = ", ".join([f"{item['test']} ({item['time_since_start']:.1f}s)" for item in value])
+                formatted_lines.append(f"Critical Test Sequence: {sequence}")
+        
+        return "\n".join(formatted_lines)
+
 class InteractionEvaluator:
     """
     Evaluates the quality of student-patient interactions, focusing on communication skills,
@@ -688,16 +903,16 @@ class DiagnosisEvaluator:
     
     # Modified evaluate method for DiagnosisEvaluator class in evaluation.py
 
-    def evaluate(
-    self, 
-    student_diagnosis: str,
-    ordered_tests: Set[str],
-    ordered_imaging: Set[str],
-    interactions: List[Dict[str, str]],
-    physical_exams: List[Dict[str, Any]] = None,
-    verified_procedures: List[Dict[str, Any]] = None,
-    notes: Dict[str, str] = None
-) -> Dict[str, Any]:
+    def evaluate(self, 
+            student_diagnosis: str,
+            ordered_tests: Set[str],
+            ordered_imaging: Set[str],
+            interactions: List[Dict[str, str]],
+            physical_exams: List[Dict[str, Any]] = None,
+            verified_procedures: List[Dict[str, Any]] = None,
+            notes: Dict[str, str] = None,
+            timestamp_data: Dict[str, Any] = None  # New parameter
+        ) -> Dict[str, Any]:
         """
         Performs a comprehensive evaluation of the student's performance.
         
@@ -709,6 +924,7 @@ class DiagnosisEvaluator:
             physical_exams: List of physical examinations performed by the student
             verified_procedures: List of verified examination procedures
             notes: SOAP notes created by the student
+            timestamp_data: Timestamp and workflow data for time-based evaluation
             
         Returns:
             Dict containing comprehensive evaluation results
@@ -775,6 +991,28 @@ class DiagnosisEvaluator:
                 "feedback": "No patient notes were recorded. Creating detailed SOAP notes is an essential part of clinical practice."
             }
         
+        # Get timestamp evaluation if timestamp data is provided
+        timestamp_eval = {}
+        if timestamp_data and timestamp_data.get("timeline") and timestamp_data.get("efficiency_metrics"):
+            timestamp_evaluator = TimestampEvaluator(self.config)
+            timestamp_eval = timestamp_evaluator.evaluate_timestamps(
+                timestamp_data["timeline"],
+                timestamp_data["efficiency_metrics"],
+                self.case
+            )
+        else:
+            timestamp_eval = {
+                "efficiency_score": 0,
+                "prioritization_score": 0,
+                "logical_progression_score": 0,
+                "guideline_adherence_score": 0,
+                "time_sensitivity_score": 0,
+                "overall_workflow_score": 0,
+                "strengths": [],
+                "areas_for_improvement": ["Timestamp data not available for evaluation."],
+                "feedback": "No timestamp data was available for workflow evaluation."
+            }
+        
         # Determine correctness based on exact match or close match
         diagnosis_correct = clinical_eval.get("diagnosis_correct", False)
         
@@ -821,6 +1059,13 @@ class DiagnosisEvaluator:
                 "notes_accuracy": notes_eval.get("accuracy_score", 0),
                 "notes_terminology": notes_eval.get("terminology_score", 0),
                 "notes_assessment": notes_eval.get("assessment_plan_score", 0),
+                
+                # Timestamp evaluation 
+                "workflow_efficiency": timestamp_eval.get("efficiency_score", 0),
+                "test_prioritization": timestamp_eval.get("prioritization_score", 0),
+                "logical_progression": timestamp_eval.get("logical_progression_score", 0),
+                "guideline_adherence": timestamp_eval.get("guideline_adherence_score", 0),
+                "time_sensitivity": timestamp_eval.get("time_sensitivity_score", 0)
             },
             
             # Overall scores for major categories
@@ -828,6 +1073,7 @@ class DiagnosisEvaluator:
             "overall_physical_exam_score": physical_eval.get("overall_exam_score", 0),
             "overall_clinical_score": clinical_eval.get("overall_clinical_score", 0),
             "overall_notes_score": notes_eval.get("overall_notes_score", 0),
+            "overall_workflow_score": timestamp_eval.get("overall_workflow_score", 0),
             
             # Specific feedback elements
             "interaction_strengths": interaction_eval.get("strengths", []),
@@ -844,14 +1090,24 @@ class DiagnosisEvaluator:
             "notes_strengths": notes_eval.get("strengths", []),
             "notes_improvements": notes_eval.get("areas_for_improvement", []),
             
+            "workflow_strengths": timestamp_eval.get("strengths", []),
+            "workflow_improvements": timestamp_eval.get("areas_for_improvement", []),
+            
+            # Add timeline data for visualization
+            "timeline_data": timestamp_data.get("timeline", []) if timestamp_data else [],
+            "efficiency_metrics": timestamp_data.get("efficiency_metrics", {}) if timestamp_data else {},
+            
             # Category feedback
             "interaction_feedback": interaction_eval.get("feedback", ""),
             "physical_exam_feedback": physical_eval.get("feedback", ""),
             "clinical_feedback": clinical_eval.get("feedback", ""),
             "notes_feedback": notes_eval.get("feedback", ""),
+            "workflow_feedback": timestamp_eval.get("feedback", ""),
             
             # Combined feedback
-            "feedback": self._generate_combined_feedback(interaction_eval, physical_eval, clinical_eval, notes_eval)
+            "feedback": self._generate_combined_feedback(
+                interaction_eval, physical_eval, clinical_eval, notes_eval, timestamp_eval
+            )
         }
         
         return combined_eval
@@ -861,7 +1117,8 @@ class DiagnosisEvaluator:
     interaction_eval: Dict[str, Any],
     physical_eval: Dict[str, Any],
     clinical_eval: Dict[str, Any],
-    notes_eval: Dict[str, Any]  # Add notes_eval parameter
+    notes_eval: Dict[str, Any],
+    timestamp_eval: Dict[str, Any]  # New parameter
 ) -> str:
         """
         Generates combined feedback from all evaluations.
@@ -871,6 +1128,7 @@ class DiagnosisEvaluator:
             physical_eval: Results of physical examination evaluation
             clinical_eval: Results of clinical decision evaluation
             notes_eval: Results of notes evaluation
+            timestamp_eval: Results of timestamp evaluation
             
         Returns:
             String containing combined feedback
@@ -910,7 +1168,7 @@ class DiagnosisEvaluator:
         else:
             clinical_feedback = "Your clinical reasoning needs significant improvement. "
         
-        # Notes assessment (new)
+        # Notes assessment
         notes_score = notes_eval.get("overall_notes_score", 0)
         if notes_score >= 8:
             notes_feedback = "Your patient documentation was comprehensive and well-structured. "
@@ -921,8 +1179,19 @@ class DiagnosisEvaluator:
         else:
             notes_feedback = "You did not create patient notes, which is an essential part of clinical practice. "
         
+        # Workflow timing assessment (new)
+        workflow_score = timestamp_eval.get("overall_workflow_score", 0)
+        if workflow_score >= 8:
+            workflow_feedback = "Your clinical workflow was highly efficient and well-prioritized. "
+        elif workflow_score >= 6:
+            workflow_feedback = "Your clinical workflow was reasonably efficient with appropriate prioritization of tasks. "
+        elif workflow_score > 0:  # Only include if there is a score
+            workflow_feedback = "Your clinical workflow efficiency needs significant improvement. "
+        else:
+            workflow_feedback = ""
+        
         # Combine all feedback
-        combined = f"{diagnosis_feedback}{communication_feedback}{physical_feedback}{clinical_feedback}{notes_feedback}\n\n"
+        combined = f"{diagnosis_feedback}{communication_feedback}{physical_feedback}{clinical_feedback}{notes_feedback}{workflow_feedback}\n\n"
         
         # Add specific points from each evaluation
         combined += "Key observations:\n"
@@ -955,7 +1224,7 @@ class DiagnosisEvaluator:
             for test in missed_tests:
                 combined += f"- {test}\n"
         
-        # Add notes feedback (new)
+        # Add notes feedback
         notes_strengths = notes_eval.get("strengths", [])
         if notes_strengths:
             combined += "\nStrengths in patient documentation:\n"
@@ -966,6 +1235,19 @@ class DiagnosisEvaluator:
         if notes_improvements:
             combined += "\nAreas to improve in patient documentation:\n"
             for improvement in notes_improvements[:3]:  # Limit to top 3
+                combined += f"- {improvement}\n"
+        
+        # Add workflow feedback (new)
+        workflow_strengths = timestamp_eval.get("strengths", [])
+        if workflow_strengths:
+            combined += "\nStrengths in clinical workflow:\n"
+            for strength in workflow_strengths[:2]:  # Limit to top 2
+                combined += f"- {strength}\n"
+                
+        workflow_improvements = timestamp_eval.get("areas_for_improvement", [])
+        if workflow_improvements:
+            combined += "\nAreas to improve in clinical workflow:\n"
+            for improvement in workflow_improvements[:3]:  # Limit to top 3
                 combined += f"- {improvement}\n"
         
         return combined

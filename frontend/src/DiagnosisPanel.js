@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import './DiagnosisPanel.css';
+import TimelineVisualization from './TimelineVisualization';
 
 const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnToSelection }) => {
   const [diagnosis, setDiagnosis] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,6 +47,7 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
       const data = await response.json();
       setResult(data);
       setIsSubmitted(true);
+      setShowTimeline(true);
       
       // Notify parent component that diagnosis has been submitted
       if (onDiagnosisSubmitted) {
@@ -66,7 +69,12 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
     setDiagnosis('');
     setIsSubmitted(false);
     setResult(null);
+    setShowTimeline(false);
     await onNewCase();
+  };
+  
+  const toggleTimeline = () => {
+    setShowTimeline(!showTimeline);
   };
 
   return (
@@ -107,6 +115,22 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
             <p>{result.feedback}</p>
           </div>
           
+          <div className="workflow-section">
+            <button 
+              className="toggle-timeline-btn" 
+              onClick={toggleTimeline}
+            >
+              {showTimeline ? 'Hide Timeline' : 'Show Clinical Workflow Timeline'}
+            </button>
+            
+            {showTimeline && result.timeline_data && (
+              <TimelineVisualization 
+                timelineData={result.timeline_data} 
+                efficiencyMetrics={result.efficiency_metrics}
+              />
+            )}
+          </div>
+          
           <div className="evaluation-summary">
             <h5>Performance Summary:</h5>
             <ul>
@@ -141,6 +165,19 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
               ) : (
                 <li className="negative">No patient notes created</li>
               )}
+              
+              {/* Add workflow evaluation items */}
+              {result.workflow_strengths && result.workflow_strengths.length > 0 && (
+                <li className="positive">Workflow strength: {result.workflow_strengths[0]}</li>
+              )}
+              {result.workflow_improvements && result.workflow_improvements.length > 0 && (
+                <li className="negative">Workflow needs improvement: {result.workflow_improvements[0]}</li>
+              )}
+              {result.overall_workflow_score > 0 ? (
+                <li className={result.overall_workflow_score >= 7 ? "positive" : "negative"}>
+                  Clinical workflow score: {result.overall_workflow_score}/10
+                </li>
+              ) : null}
             </ul>
           </div>
           
