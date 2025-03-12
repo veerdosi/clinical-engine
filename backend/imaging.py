@@ -392,14 +392,14 @@ IMPRESSION:
         """
         try:
             # Replace with your remote server IP address
-            api_url = "http://10.96.176.246:5000/generate"
+            api_url = "http://127.0.0.1:5001/generate"
             
             # Prepare the request
             headers = {"Content-Type": "application/json"}
             data = {"prompt": prompt}
             
             # Send the request
-            response = requests.post(api_url, json=data, headers=headers, timeout=30)
+            response = requests.post(api_url, json=data, headers=headers, timeout=60)
             
             # Check if the request was successful
             if response.status_code == 200:
