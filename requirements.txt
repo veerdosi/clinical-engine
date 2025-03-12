@@ -1,0 +1,9 @@
+Flask
+flask-cors
+openai
+requests
+replicate
+python-dotenv
+aiohttp
+reportlab
+gunicorn
