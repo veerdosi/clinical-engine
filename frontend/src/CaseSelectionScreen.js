@@ -12,17 +12,18 @@ const CaseSelectionScreen = ({ onCaseGenerated }) => {
   const specialties = [
     { value: "random", label: "Feeling Lucky? (Random Specialty)" },
     { value: "Internal Medicine", label: "Internal Medicine" },
-    { value: "Emergency Medicine", label: "Emergency Medicine" },
+    { value: "Urology", label: "Urology" },
     { value: "Cardiology", label: "Cardiology" },
     { value: "Neurology", label: "Neurology" },
-    { value: "Pulmonology", label: "Pulmonology" }
+    { value: "Pulmonology", label: "Pulmonology" },
+    { value: "Orthopedic", label: "Orthopedic" }
   ];
   
   const difficulties = [
-    { value: "random", label: "Feeling Lucky? (Random Difficulty)" },
-    { value: "easy", label: "Easy - common presentation with classic symptoms" },
-    { value: "moderate", label: "Moderate - atypical presentation with comorbidities" },
-    { value: "hard", label: "Hard - rare condition with diagnostic red herrings" }
+    { value: "Random", label: "Feeling Lucky? (Random Difficulty)" },
+    { value: "Easy", label: "Easy - common presentation with classic symptoms" },
+    { value: "Moderate", label: "Moderate - atypical presentation with comorbidities" },
+    { value: "Hard", label: "Hard - rare condition with diagnostic red herrings" }
   ];
 
   const handleGenerateCase = async () => {

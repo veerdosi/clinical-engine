@@ -331,88 +331,52 @@ IMPRESSION:
             
         return md_report
 
-# Commented out image generation class as requested
-"""
-class FluxImagingGenerator:
-    def __init__(self, config):
-        self.config = config
-        self.model = "black-forest-labs/flux-pro"
-    
-    def generate_image(self, parameters: Dict) -> Dict:
-        '''
-        Generate a medical image using Replicate's Flux model.
-        '''
+    def generate_imaging_prompt(case: Dict[str, Any], modality: str, config) -> Dict[str, Any]:
+        """
+        Generates a natural language prompt for radiology report generation.
+        This is a legacy function maintained for compatibility.
+        
+        Args:
+            case: Patient case information
+            modality: Requested imaging modality
+            config: Configuration object
+            
+        Returns:
+            Dict with parameters for report generation
+        """
+        system_prompt = f"""You are a radiologist assistant. Create imaging reports for:
+    Patient Case: {json.dumps(case)}
+    Modality: {modality}
+
+    Create a natural language description of radiological findings that would be 
+    consistent with this case. Focus on what would be visible in this imaging modality
+    for a patient with the given symptoms and likely diagnosis.
+
+    Example output:
+    {{
+        "clinical_indication": "45yo male with chest pain",
+        "findings_description": "PA chest X-ray showing left lower lobe consolidation with air bronchograms, consistent with pneumonia.",
+        "diagnostic_hints": ["Pneumonia", "Pulmonary edema"]
+    }}"""
+        
         try:
-            input_data = {
-                "prompt": parameters.get("findings_description", "Normal anatomy"),
-                "width": parameters.get("width", 1024),
-                "height": parameters.get("height", 1024),
-                "negative_prompt": "artifacts, blurry, low quality",
-                "num_outputs": 1,
-                "guidance_scale": 7.5,
-                "num_inference_steps": 50
-            }
-            client = replicate.Client(api_token=self.config.replicate_key)
-            output = client.run(
-                self.model,
-                input=input_data
+            client = Client(api_key=config.openai_api_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Generate standard imaging study for {modality}"}
+                ],
+                temperature=0.4,
+                response_format={"type": "json_object"}
             )
-            image_url = output[0] if output else None
-            return {
-                "image_url": image_url,
-                "findings_report": parameters.get("findings_description"),
-                "metadata": input_data
-            }
+            
+            imaging_data = json.loads(response.choices[0].message.content)
+            return imaging_data
         except Exception as e:
-            raise Exception(f"Replicate API Error: {str(e)}")
-"""
-
-def generate_imaging_prompt(case: Dict[str, Any], modality: str, config) -> Dict[str, Any]:
-    """
-    Generates a natural language prompt for radiology report generation.
-    This is a legacy function maintained for compatibility.
-    
-    Args:
-        case: Patient case information
-        modality: Requested imaging modality
-        config: Configuration object
-        
-    Returns:
-        Dict with parameters for report generation
-    """
-    system_prompt = f"""You are a radiologist assistant. Create imaging reports for:
-Patient Case: {json.dumps(case)}
-Modality: {modality}
-
-Create a natural language description of radiological findings that would be 
-consistent with this case. Focus on what would be visible in this imaging modality
-for a patient with the given symptoms and likely diagnosis.
-
-Example output:
-{{
-    "clinical_indication": "45yo male with chest pain",
-    "findings_description": "PA chest X-ray showing left lower lobe consolidation with air bronchograms, consistent with pneumonia.",
-    "diagnostic_hints": ["Pneumonia", "Pulmonary edema"]
-}}"""
-    
-    try:
-        client = Client(api_key=config.openai_api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Generate standard imaging study for {modality}"}
-            ],
-            temperature=0.4,
-            response_format={"type": "json_object"}
-        )
-        
-        imaging_data = json.loads(response.choices[0].message.content)
-        return imaging_data
-    except Exception as e:
-        logger.error(f"Error generating imaging prompt: {str(e)}")
-        return {
-            "clinical_indication": case.get("presenting_complaint", "Unknown"),
-            "findings_description": f"Standard {modality} with no significant abnormalities.",
-            "diagnostic_hints": [case.get("diagnosis", "Unknown")]
-        }
+            logger.error(f"Error generating imaging prompt: {str(e)}")
+            return {
+                "clinical_indication": case.get("presenting_complaint", "Unknown"),
+                "findings_description": f"Standard {modality} with no significant abnormalities.",
+                "diagnostic_hints": [case.get("diagnosis", "Unknown")]
+            }

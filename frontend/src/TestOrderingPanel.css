@@ -9,6 +9,54 @@
   overflow-y: auto;
 }
 
+.markdown-results {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 16px;
+  margin-top: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.markdown-results h1 {
+  font-size: 1.5rem;
+  margin-top: 0;
+  color: #333;
+}
+
+.markdown-results h2 {
+  font-size: 1.25rem;
+  color: #444;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.markdown-results h3 {
+  font-size: 1.1rem;
+  color: #555;
+}
+
+.table-row {
+  display: flex;
+  border-bottom: 1px solid #eee;
+}
+
+.table-row:first-of-type {
+  font-weight: bold;
+  background-color: #f5f5f5;
+}
+
+.table-cell {
+  padding: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.markdown-results strong {
+  font-weight: bold;
+  color: #d32f2f;
+}
+
 .test-ordering-panel.full-width {
   max-height: none;
   border: none;
