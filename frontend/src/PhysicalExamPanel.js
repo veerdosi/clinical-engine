@@ -1,73 +1,100 @@
-// Stable PhysicalExamPanel.js with proper fullscreen modal
-import React, { useState, useEffect } from 'react';
+// Revised PhysicalExamPanel.js with persistent modal fix
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import './PhysicalExamPanel.css';
 
-// This component handles the actual modal content and doesn't re-render when parent state changes
-const ExamModal = ({ 
-  onClose, 
-  examName, setExamName,
-  currentStep, setCurrentStep,
-  procedureSteps, setProcedureSteps,
-  stepNumber, setStepNumber,
-  procedureComplete, setProcedureComplete,
-  examResults, setExamResults,
-  error, setError,
-  isLoading, setIsLoading,
-  feedback, setFeedback,
-  isDisabled,
-  resetExam,
-  checkProcedure
-}) => {
-  // Setup body locking once when modal opens
-  useEffect(() => {
-    const originalStyle = window.getComputedStyle(document.body).overflow;
-    const originalPosition = window.getComputedStyle(document.body).position;
-    const scrollY = window.scrollY;
+// Modal component implemented as a class to avoid unnecessary re-renders
+class ExamModal extends React.Component {
+  constructor(props) {
+    super(props);
+    // Local state for the modal component
+    this.state = {
+      localCurrentStep: props.currentStep || '',
+    };
     
-    // Lock body scroll
-    document.body.style.overflow = 'hidden';
+    // Bind methods
+    this.handleStepChange = this.handleStepChange.bind(this);
+    this.addProcedureStep = this.addProcedureStep.bind(this);
+    this.removeStep = this.removeStep.bind(this);
+  }
+  
+  componentDidMount() {
+    // Lock body scroll when modal opens
+    const scrollY = window.scrollY;
     document.body.style.position = 'fixed';
     document.body.style.top = `-${scrollY}px`;
     document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
     
-    // Handle ESC key
-    const handleEscKey = (event) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-    
-    window.addEventListener('keydown', handleEscKey);
-    
-    // Clean up function
-    return () => {
-      // Restore original body styles and scroll position
-      document.body.style.overflow = originalStyle;
-      document.body.style.position = originalPosition;
-      document.body.style.top = '';
-      document.body.style.width = '';
-      
-      // Restore scroll position
-      window.scrollTo(0, scrollY);
-      window.removeEventListener('keydown', handleEscKey);
-    };
-  }, [onClose]);
+    // Add ESC key handler
+    window.addEventListener('keydown', this.handleEscKey);
+  }
   
-  const addProcedureStep = () => {
-    if (!currentStep.trim()) return;
+  componentWillUnmount() {
+    // Restore scroll position when modal closes
+    const scrollY = document.body.style.top;
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    document.body.style.overflow = '';
+    
+    if (scrollY) {
+      window.scrollTo(0, parseInt(scrollY || '0', 10) * -1);
+    }
+    
+    // Remove ESC key handler
+    window.removeEventListener('keydown', this.handleEscKey);
+  }
+  
+  // Update local state when props change
+  static getDerivedStateFromProps(props, state) {
+    // Only update if props.currentStep is different from what was used to initialize state.localCurrentStep
+    if (props.currentStep !== state.prevPropsCurrentStep) {
+      return {
+        localCurrentStep: props.currentStep,
+        prevPropsCurrentStep: props.currentStep
+      };
+    }
+    return null;
+  }
+  
+  // Handle ESC key
+  handleEscKey = (event) => {
+    if (event.key === 'Escape') {
+      this.props.onClose();
+    }
+  };
+  
+  // Update local state when input changes
+  handleStepChange(e) {
+    this.setState({ localCurrentStep: e.target.value });
+    this.props.setCurrentStep(e.target.value);
+  }
+  
+  // Add a procedure step without closing the modal
+  addProcedureStep() {
+    const { localCurrentStep } = this.state;
+    const { procedureSteps, stepNumber, setProcedureSteps, setStepNumber } = this.props;
+    
+    if (!localCurrentStep.trim()) return;
     
     const newSteps = [...procedureSteps, { 
       number: stepNumber, 
-      description: currentStep 
+      description: localCurrentStep 
     }];
     
     setProcedureSteps(newSteps);
     setStepNumber(stepNumber + 1);
-    setCurrentStep('');
-  };
-
-  const removeStep = (index) => {
+    
+    // Clear only the local state, this avoids re-rendering the parent
+    this.setState({ localCurrentStep: '' });
+    this.props.setCurrentStep('');
+  }
+  
+  // Remove a step without closing the modal
+  removeStep(index) {
+    const { procedureSteps, setProcedureSteps, setStepNumber } = this.props;
+    
     const newSteps = [...procedureSteps];
     newSteps.splice(index, 1);
     
@@ -79,155 +106,165 @@ const ExamModal = ({
     
     setProcedureSteps(renumberedSteps);
     setStepNumber(renumberedSteps.length + 1);
-  };
+  }
   
-  // Create a modal element that's attached to the body
-  return ReactDOM.createPortal(
-    <div className="exam-modal-overlay" onClick={(e) => {
-      if (e.target === e.currentTarget) onClose();
-    }}>
-      <div className="exam-modal-content">
-        <button 
-          className="exam-modal-close" 
-          onClick={onClose}
-          aria-label="Close dialog"
-        >
-          &times;
-        </button>
-        
-        <div className="exam-modal-header">
-          <h3>Physical Examination</h3>
-        </div>
-        
-        <div className="exam-modal-body">
-          <div className="exam-procedure-section">
-            <div className="input-group">
-              <label htmlFor="exam-name-modal">Examination Name:</label>
-              <input
-                type="text"
-                id="exam-name-modal"
-                value={examName}
-                onChange={(e) => setExamName(e.target.value)}
-                placeholder="e.g., Cardiac Auscultation, Abdominal Examination"
-                disabled={isDisabled || isLoading || procedureComplete}
-              />
+  render() {
+    const { 
+      onClose, examName, setExamName,
+      procedureSteps, procedureComplete, examResults,
+      error, isLoading, feedback, isDisabled,
+      resetExam, checkProcedure, stepNumber
+    } = this.props;
+    
+    const { localCurrentStep } = this.state;
+    
+    return ReactDOM.createPortal(
+      <div className="exam-modal-overlay" onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}>
+        <div className="exam-modal-content" onClick={e => e.stopPropagation()}>
+          <button 
+            className="exam-modal-close" 
+            onClick={onClose}
+            aria-label="Close dialog"
+          >
+            &times;
+          </button>
+          
+          <div className="exam-modal-header">
+            <h3>Physical Examination</h3>
+          </div>
+          
+          <div className="exam-modal-body">
+            <div className="exam-procedure-section">
+              <div className="input-group">
+                <label htmlFor="exam-name-modal">Examination Name:</label>
+                <input
+                  type="text"
+                  id="exam-name-modal"
+                  value={examName}
+                  onChange={(e) => setExamName(e.target.value)}
+                  placeholder="e.g., Cardiac Auscultation, Abdominal Examination"
+                  disabled={isDisabled || isLoading || procedureComplete}
+                />
+              </div>
+              
+              {procedureSteps.length > 0 && (
+                <div className="procedure-steps-list">
+                  <h4>Procedure Steps:</h4>
+                  <ol>
+                    {procedureSteps.map((step, index) => (
+                      <li key={`step-${index}-${step.number}`}>
+                        {step.description}
+                        {!procedureComplete && (
+                          <button 
+                            className="remove-step-btn"
+                            onClick={() => this.removeStep(index)}
+                            disabled={isDisabled || isLoading}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              
+              {!procedureComplete && (
+                <div className="step-input-section">
+                  <div className="input-group">
+                    <label htmlFor="step-input">Step {stepNumber}:</label>
+                    <textarea
+                      id="step-input"
+                      value={localCurrentStep}
+                      onChange={this.handleStepChange}
+                      placeholder="Describe the next procedure step in detail..."
+                      disabled={isDisabled || isLoading || !examName}
+                    />
+                  </div>
+                  
+                  <div className="step-buttons">
+                    <button 
+                      className="add-step-btn"
+                      onClick={this.addProcedureStep}
+                      disabled={isDisabled || isLoading || !localCurrentStep.trim()}
+                    >
+                      Add Step
+                    </button>
+                    
+                    <button 
+                      className="check-procedure-btn"
+                      onClick={checkProcedure}
+                      disabled={isDisabled || isLoading || procedureSteps.length === 0}
+                    >
+                      {isLoading ? 'Processing...' : 'Verify & Perform Examination'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              {feedback && (
+                <div className={`feedback-message ${feedback.type}`}>
+                  <p>{feedback.message}</p>
+                </div>
+              )}
+              
+              {error && (
+                <div className="error-message">
+                  <p>{error}</p>
+                </div>
+              )}
+              
+              {examResults && (
+                <div className="exam-results">
+                  <div className="result-header">
+                    <h4>Examination Findings: {examName}</h4>
+                    <button 
+                      className="new-exam-btn"
+                      onClick={resetExam}
+                      disabled={isDisabled || isLoading}
+                    >
+                      New Examination
+                    </button>
+                  </div>
+                  
+                  <div className="exam-content">
+                    {examResults.findings ? (
+                      <div dangerouslySetInnerHTML={{ 
+                        __html: typeof examResults.findings === 'string' 
+                          ? examResults.findings.replace(/\n/g, '<br>') 
+                          : Object.entries(examResults.findings)
+                            .map(([key, value]) => `<p><strong>${key}:</strong> ${value}</p>`)
+                            .join('')
+                      }} />
+                    ) : (
+                      <p>No significant findings.</p>
+                    )}
+                    
+                    {examResults.interpretation && (
+                      <div className="exam-interpretation">
+                        <h5>Interpretation</h5>
+                        <p>{examResults.interpretation}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            
-            {procedureSteps.length > 0 && (
-              <div className="procedure-steps-list">
-                <h4>Procedure Steps:</h4>
-                <ol>
-                  {procedureSteps.map((step, index) => (
-                    <li key={index}>
-                      {step.description}
-                      {!procedureComplete && (
-                        <button 
-                          className="remove-step-btn"
-                          onClick={() => removeStep(index)}
-                          disabled={isDisabled || isLoading}
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-            
-            {!procedureComplete && (
-              <div className="step-input-section">
-                <div className="input-group">
-                  <label htmlFor="step-input">Step {stepNumber}:</label>
-                  <textarea
-                    id="step-input"
-                    value={currentStep}
-                    onChange={(e) => setCurrentStep(e.target.value)}
-                    placeholder="Describe the next procedure step in detail..."
-                    disabled={isDisabled || isLoading || !examName}
-                  />
-                </div>
-                
-                <div className="step-buttons">
-                  <button 
-                    className="add-step-btn"
-                    onClick={addProcedureStep}
-                    disabled={isDisabled || isLoading || !currentStep.trim()}
-                  >
-                    Add Step
-                  </button>
-                  
-                  <button 
-                    className="check-procedure-btn"
-                    onClick={checkProcedure}
-                    disabled={isDisabled || isLoading || procedureSteps.length === 0}
-                  >
-                    {isLoading ? 'Processing...' : 'Verify & Perform Examination'}
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {feedback && (
-              <div className={`feedback-message ${feedback.type}`}>
-                <p>{feedback.message}</p>
-              </div>
-            )}
-            
-            {error && (
-              <div className="error-message">
-                <p>{error}</p>
-              </div>
-            )}
-            
-            {examResults && (
-              <div className="exam-results">
-                <div className="result-header">
-                  <h4>Examination Findings: {examName}</h4>
-                  <button 
-                    className="new-exam-btn"
-                    onClick={resetExam}
-                    disabled={isDisabled || isLoading}
-                  >
-                    New Examination
-                  </button>
-                </div>
-                
-                <div className="exam-content">
-                  {examResults.findings ? (
-                    <div dangerouslySetInnerHTML={{ 
-                      __html: typeof examResults.findings === 'string' 
-                        ? examResults.findings.replace(/\n/g, '<br>') 
-                        : Object.entries(examResults.findings)
-                          .map(([key, value]) => `<p><strong>${key}:</strong> ${value}</p>`)
-                          .join('')
-                    }} />
-                  ) : (
-                    <p>No significant findings.</p>
-                  )}
-                  
-                  {examResults.interpretation && (
-                    <div className="exam-interpretation">
-                      <h5>Interpretation</h5>
-                      <p>{examResults.interpretation}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+          </div>
+          
+          <div className="exam-modal-footer">
+            <button className="close-modal-btn" onClick={onClose}>
+              Close
+            </button>
           </div>
         </div>
-        
-        <div className="exam-modal-footer">
-          <button className="close-modal-btn" onClick={onClose}>
-            Close
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-};
+      </div>,
+      document.body
+    );
+  }
+}
 
 // Main component that manages state
 const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
@@ -243,19 +280,13 @@ const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
   const [feedback, setFeedback] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  const handleExamNameChange = (e) => {
+  // Use useCallback to prevent recreating these functions on every render
+  const handleExamNameChange = useCallback((e) => {
     setExamName(e.target.value);
-    // Reset other fields when exam name changes
-    setProcedureSteps([]);
-    setCurrentStep('');
-    setProcedureComplete(false);
-    setStepNumber(1);
-    setExamResults(null);
-    setError(null);
-    setFeedback(null);
-  };
+    // Don't reset other fields here - this helps maintain modal state
+  }, []);
   
-  const resetExam = () => {
+  const resetExam = useCallback(() => {
     setExamName('');
     setCurrentStep('');
     setProcedureSteps([]);
@@ -264,9 +295,10 @@ const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
     setExamResults(null);
     setError(null);
     setFeedback(null);
-  };
+    // Importantly, don't change modal visibility
+  }, []);
 
-  const checkProcedure = async () => {
+  const checkProcedure = useCallback(async () => {
     if (!examName || procedureSteps.length === 0) {
       setError("Please enter an examination name and at least one procedure step.");
       return;
@@ -315,7 +347,7 @@ const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [examName, procedureSteps]);
 
   const performExamination = async (systemToExamine) => {
     setIsLoading(true);
@@ -344,6 +376,14 @@ const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
     }
   };
 
+  const openModal = useCallback(() => {
+    setShowModal(true);
+  }, []);
+  
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+  }, []);
+
   // Regular panel content (non-modal view)
   return (
     <div className="physical-exam-panel">
@@ -353,7 +393,7 @@ const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
           <p>Enter examination name and procedure steps in the correct order</p>
           <button 
             className="expand-view-btn" 
-            onClick={() => setShowModal(true)}
+            onClick={openModal}
             title="Expand to full screen"
           >
             <span className="expand-icon">⛶</span>
@@ -393,7 +433,7 @@ const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
         
         <button 
           className="fullscreen-btn" 
-          onClick={() => setShowModal(true)}
+          onClick={openModal}
         >
           Continue in Full Screen
         </button>
@@ -402,7 +442,7 @@ const PhysicalExamPanel = ({ isDisabled, caseInfo }) => {
       {/* Conditionally render the modal */}
       {showModal && (
         <ExamModal
-          onClose={() => setShowModal(false)}
+          onClose={closeModal}
           examName={examName}
           setExamName={setExamName}
           currentStep={currentStep}

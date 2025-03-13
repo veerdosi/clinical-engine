@@ -25,7 +25,8 @@ def create_app():
     """
     Create and configure the Flask application
     """
-    app = Flask(__name__, static_folder='static')
+    #app = Flask(__name__, static_folder='static')
+    app = Flask(__name__)
     CORS(app)
     
     # Initialize configuration with API keys

@@ -263,7 +263,7 @@ class APIRoutes:
                     image_prompt = self.imaging_system.generate_image_prompt(current_case, imaging_name)
                     
                     # Define path to save the generated image
-                    cwd = os.getcwd()
+                    cwd = os.path.dirname(os.getcwd())
                     image_filename = f"{imaging_name.replace(' ', '_').lower()}_{int(time.time())}.png"
                     image_dir = os.path.join(cwd, 'static', 'generated_images')
                     os.makedirs(image_dir, exist_ok=True)
