@@ -71,6 +71,14 @@ class VirtualPatientAgent:
             if "description" in atypical and isinstance(atypical["description"], str):
                 symptoms.append(atypical["description"])
                 
+        # Check for symptoms as array directly in case
+        if "symptoms" in self.case and isinstance(self.case["symptoms"], list):
+            symptoms.extend(self.case["symptoms"])
+            
+        # Check presenting_complaint
+        if "presenting_complaint" in self.case and self.case["presenting_complaint"]:
+            symptoms.append(self.case["presenting_complaint"])
+                
         # Deduplicate symptoms
         unique_symptoms = []
         for symptom in symptoms:
@@ -98,27 +106,35 @@ class VirtualPatientAgent:
         return demo
 
     def _build_system_prompt(self):
-        """Build a comprehensive system prompt with all available case information"""
+        """Build a comprehensive system prompt with all available case information and natural patient behaviors"""
         # Basic patient information
         age = self.demographics.get("age", "unknown age")
         gender = self.demographics.get("gender", "unknown gender")
         name = self.demographics.get("name", "a patient")
         
-        # Start with basic identity and presenting complaint
-        prompt = f"""You are {name}, a {age}-year-old {gender} patient. 
+        # Construct patient personality and background based on case
+        presenting_complaint = self.case.get("presenting_complaint", "health concerns")
         
-You are visiting a doctor for the following health concerns:
+        # Start with strong identity and context guidance
+        prompt = f"""You are embodying {name}, a {age}-year-old {gender} patient speaking with a doctor today. 
+This is a medical simulation for training doctors, so respond as authentically as you can.
+
+CONTEXT AND DISPOSITION:
+You're visiting the doctor for {presenting_complaint}. You're talking to a medical student or doctor who you're meeting for the first time. You're generally cooperative but naturally concerned about your health. Your attitude is {self._determine_patient_attitude()}.
+
+YOUR MEDICAL INFORMATION:
 """
 
-        # Add symptoms
+        # Add symptoms with experienced details, not just listing them
+        prompt += "Your current symptoms and experiences:\n"
         for symptom in self.symptoms:
             prompt += f"- {symptom}\n"
-            
+        
         # Add vital signs if present
-        if "vital_signs" in self.case:
-            prompt += "\nYour vital signs are:\n"
-            vitals = self.case["vital_signs"]
-            if isinstance(vitals, dict):
+        if "vital_signs" in self.case or "vitals" in self.case:
+            vitals = self.case.get("vital_signs", self.case.get("vitals", {}))
+            if isinstance(vitals, dict) and vitals:
+                prompt += "\nThe doctor previously recorded these vital signs, but you're not aware of these measurements yourself:\n"
                 for key, value in vitals.items():
                     prompt += f"- {key}: {value}\n"
                     
@@ -130,35 +146,110 @@ You are visiting a doctor for the following health concerns:
                 
         # Add comorbidities if present
         if "comorbidities" in self.case and isinstance(self.case["comorbidities"], list):
-            prompt += "\nYou also have these chronic conditions:\n"
+            prompt += "\nYou also have these ongoing health conditions:\n"
             for condition in self.case["comorbidities"]:
                 prompt += f"- {condition}\n"
                 
         # Add medication allergies
         if "medication_allergies" in self.case and isinstance(self.case["medication_allergies"], list):
-            prompt += "\nYou have allergies to these medications:\n"
-            for allergy in self.case["medication_allergies"]:
-                prompt += f"- {allergy}\n"
+            if self.case["medication_allergies"]:
+                prompt += "\nYou're allergic to these medications:\n"
+                for allergy in self.case["medication_allergies"]:
+                    prompt += f"- {allergy}\n"
+            else:
+                prompt += "\nYou have no known medication allergies.\n"
                 
-        # Add negative findings
+        # Add negative findings - things patient does NOT have
         if "negative_findings" in self.case and isinstance(self.case["negative_findings"], list):
-            prompt += "\nImportant negative findings to mention if asked:\n"
+            prompt += "\nImportant: If directly asked, you do NOT have these symptoms/conditions:\n"
             for finding in self.case["negative_findings"]:
                 prompt += f"- {finding}\n"
+                
+        # Add social history if available
+        social_history = self._extract_social_history()
+        if social_history:
+            prompt += "\nYour personal and social background:\n"
+            for detail in social_history:
+                prompt += f"- {detail}\n"
         
-        # Add behavioral instructions
+        # Add detailed behavioral instructions
         prompt += """
-Follow these rules during the conversation:
-1. Speak naturally like a real patient would
-2. Do not use medical terminology unless the doctor uses it first
-3. Only reveal medical details when asked directly relevant questions
-4. If asked about symptoms you don't have, simply say you don't have those symptoms
-5. If asked about symptoms you do have, describe them in detail
-6. Stay consistent with your medical history and symptoms throughout the conversation
-7. If asked about systems unrelated to your symptoms, say you haven't noticed any issues with those
-8. Act as if you're meeting this doctor for the first time"""
+BEHAVIOR AND COMMUNICATION GUIDELINES:
 
+1. NATURAL SPEECH: Speak naturally like a real patient, not a medical professional. Use plain language, not medical terminology. For example, say "my stomach hurts" rather than "I'm experiencing epigastric pain."
+
+2. KNOWLEDGE LEVEL: You have an average person's understanding of medicine. You know basic terms like "blood pressure" but wouldn't know what "hypertension" means unless your doctor has diagnosed you with it previously.
+
+3. ANSWER STYLE:
+   - Give appropriately detailed answers to open-ended questions
+   - Give brief answers to yes/no questions
+   - If asked about a symptom you have, describe it naturally (location, severity, duration, what makes it better/worse)
+   - If asked about a symptom you don't have, simply say you don't have it
+   - Never list symptoms unless specifically asked about each one
+
+4. EMOTIONAL AUTHENTICITY: Express appropriate concern about your symptoms. Show relief when reassured. React naturally if the doctor says something concerning.
+
+5. CONSISTENCY: Never contradict information about your symptoms or history that you've already shared. If you're unsure about something, say so rather than making up new details.
+
+6. CONVERSATIONAL FLOW: Let the doctor lead the interview but respond as a real person would:
+   - Ask occasional clarifying questions if you don't understand something
+   - Express natural concerns about serious symptoms
+   - Don't volunteer all information at once - wait to be asked specific questions
+
+Remember: You're a real person with concerns, not just a collection of symptoms. Respond with authentic human reactions to questions about your health.
+"""
         return prompt
+
+    def _determine_patient_attitude(self):
+        """Determine a realistic patient attitude based on the case details"""
+        # Check for emergency/urgent conditions
+        urgent_keywords = ["severe", "extreme", "worst", "unbearable", "crushing", "can't breathe", 
+                          "chest pain", "stroke", "hemorrhage", "bleeding", "unconscious"]
+        
+        symptoms_text = " ".join(self.symptoms).lower()
+        
+        # Check severity from symptoms
+        if any(keyword in symptoms_text for keyword in urgent_keywords):
+            return "anxious and distressed due to the severity of your symptoms"
+        
+        # Check for chronic conditions
+        chronic_conditions = []
+        if "past_medical_conditions" in self.case:
+            chronic_conditions = self.case["past_medical_conditions"]
+        
+        chronic_keywords = ["chronic", "ongoing", "years", "diabetes", "hypertension", "arthritis"]
+        conditions_text = " ".join(str(c) for c in chronic_conditions).lower()
+        
+        if any(keyword in conditions_text for keyword in chronic_keywords) or any(keyword in symptoms_text for keyword in ["chronic", "ongoing", "years"]):
+            return "somewhat frustrated as you've been dealing with this problem for a while"
+        
+        # Default moderate concern
+        return "moderately concerned about your symptoms but calm and cooperative"
+
+    def _extract_social_history(self):
+        """Extract or generate basic social history context from case data"""
+        social_history = []
+        
+        # Extract explicitly defined social history if available
+        if "social_history" in self.case:
+            social_data = self.case["social_history"]
+            if isinstance(social_data, dict):
+                for key, value in social_data.items():
+                    social_history.append(f"{key}: {value}")
+            elif isinstance(social_data, list):
+                social_history.extend(social_data)
+            elif isinstance(social_data, str):
+                social_history.append(social_data)
+        
+        # Add occupation if available
+        if "occupation" in self.case:
+            social_history.append(f"You work as a {self.case['occupation']}")
+        
+        # Add living situation if available
+        if "living_situation" in self.case:
+            social_history.append(self.case["living_situation"])
+            
+        return social_history
 
     def text_to_speech(self, text: str, voice_id: str = None) -> BytesIO:
         """
