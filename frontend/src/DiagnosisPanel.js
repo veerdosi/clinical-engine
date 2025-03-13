@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './DiagnosisPanel.css';
 import TimelineVisualization from './TimelineVisualization';
 
@@ -8,6 +8,32 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
+  const [expandedView, setExpandedView] = useState(false);
+
+  // When diagnosis is submitted, set expanded view after a short delay
+  useEffect(() => {
+    if (isSubmitted && result) {
+      // Short delay to allow animation to work smoothly
+      const timer = setTimeout(() => {
+        setExpandedView(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isSubmitted, result]);
+
+  // Handle ESC key to exit expanded view
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.keyCode === 27 && expandedView) {
+        setExpandedView(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [expandedView]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,11 +96,16 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
     setIsSubmitted(false);
     setResult(null);
     setShowTimeline(false);
+    setExpandedView(false);
     await onNewCase();
   };
   
   const toggleTimeline = () => {
     setShowTimeline(!showTimeline);
+  };
+
+  const toggleExpandedView = () => {
+    setExpandedView(!expandedView);
   };
 
   const renderScoreTable = () => {
@@ -237,76 +268,114 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
       </div>
     );
   };
-
-  return (
-    <div className="diagnosis-panel">
-      <div className="diagnosis-header">
-        <h3>Medical Diagnosis</h3>
-        <p>Submit your final diagnosis based on your evaluation</p>
-      </div>
-
-      {!isSubmitted ? (
-        <form onSubmit={handleSubmit} className="diagnosis-form">
-          <div className="input-group">
-            <label htmlFor="diagnosis">Final Diagnosis:</label>
-            <input
-              type="text"
-              id="diagnosis"
-              value={diagnosis}
-              onChange={(e) => setDiagnosis(e.target.value)}
-              placeholder="Enter your diagnosis"
-              disabled={loading}
-            />
-          </div>
-          <button type="submit" disabled={!diagnosis.trim() || loading}>
-            {loading ? 'Submitting...' : 'Submit Diagnosis'}
-          </button>
-        </form>
-      ) : (
-        <div className={`diagnosis-result ${result.correct ? 'correct' : 'incorrect'}`}>
+  
+  // Render evaluation result either in normal view or expanded view
+  const renderEvaluationResult = () => {
+    return (
+      <div className={`diagnosis-result ${result.correct ? 'correct' : 'incorrect'}`}>
+        <div className="diagnosis-header-controls">
           <h4>{result.correct ? '✅ Correct Diagnosis!' : '❌ Incorrect Diagnosis'}</h4>
           
-          <div className="diagnosis-details">
-            <p><strong>Your diagnosis:</strong> {diagnosis}</p>
-            <p><strong>Correct diagnosis:</strong> {result.actual_diagnosis}</p>
-          </div>
-          
-          {/* Render the new score table */}
-          {renderScoreTable()}
-          
-          {/* Render strengths and improvement areas */}
-          {renderStrengthsAndAreas()}
-          
-          <div className="workflow-section">
+          {/* Show toggle button only in normal view */}
+          {!expandedView && (
             <button 
-              className="toggle-timeline-btn" 
-              onClick={toggleTimeline}
+              className="expand-view-btn" 
+              onClick={toggleExpandedView}
+              title="Expand to full screen"
             >
-              {showTimeline ? 'Hide Timeline' : 'Show Clinical Workflow Timeline'}
+              <span className="expand-icon">⛶</span>
             </button>
-            
-            {showTimeline && result.timeline_data && (
-              <TimelineVisualization 
-                timelineData={result.timeline_data} 
-                efficiencyMetrics={result.efficiency_metrics}
-              />
-            )}
-          </div>
+          )}
           
-          <div className="button-group">
-            <button className="new-case-btn" onClick={handleNewCase}>
-              Start New Case
+          {/* Show close button only in expanded view */}
+          {expandedView && (
+            <button 
+              className="close-expanded-btn" 
+              onClick={toggleExpandedView}
+              title="Exit full screen"
+            >
+              <span className="close-icon">×</span>
             </button>
-            
-            {/* Add this button if onReturnToSelection prop is provided */}
-            {onReturnToSelection && (
-              <button className="selection-btn" onClick={onReturnToSelection}>
-                Return to Case Selection
-              </button>
-            )}
-          </div>
+          )}
         </div>
+        
+        <div className="diagnosis-details">
+          <p><strong>Your diagnosis:</strong> {diagnosis}</p>
+          <p><strong>Correct diagnosis:</strong> {result.actual_diagnosis}</p>
+        </div>
+        
+        {/* Render the score table */}
+        {renderScoreTable()}
+        
+        {/* Render strengths and improvement areas */}
+        {renderStrengthsAndAreas()}
+        
+        <div className="workflow-section">
+          <button 
+            className="toggle-timeline-btn" 
+            onClick={toggleTimeline}
+          >
+            {showTimeline ? 'Hide Timeline' : 'Show Clinical Workflow Timeline'}
+          </button>
+          
+          {showTimeline && result.timeline_data && (
+            <TimelineVisualization 
+              timelineData={result.timeline_data} 
+              efficiencyMetrics={result.efficiency_metrics}
+            />
+          )}
+        </div>
+        
+        <div className="button-group">
+          <button className="new-case-btn" onClick={handleNewCase}>
+            Start New Case
+          </button>
+          
+          {/* Add this button if onReturnToSelection prop is provided */}
+          {onReturnToSelection && (
+            <button className="selection-btn" onClick={onReturnToSelection}>
+              Return to Case Selection
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className={`diagnosis-panel ${expandedView ? 'expanded-fullscreen' : ''}`}>
+      {!isSubmitted ? (
+        /* Normal view when diagnosis hasn't been submitted yet */
+        <>
+          <div className="diagnosis-header">
+            <h3>Medical Diagnosis</h3>
+            <p>Submit your final diagnosis based on your evaluation</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="diagnosis-form">
+            <div className="input-group">
+              <label htmlFor="diagnosis">Final Diagnosis:</label>
+              <input
+                type="text"
+                id="diagnosis"
+                value={diagnosis}
+                onChange={(e) => setDiagnosis(e.target.value)}
+                placeholder="Enter your diagnosis"
+                disabled={loading}
+              />
+            </div>
+            <button type="submit" disabled={!diagnosis.trim() || loading}>
+              {loading ? 'Submitting...' : 'Submit Diagnosis'}
+            </button>
+          </form>
+        </>
+      ) : (
+        /* Evaluation results - shown in either normal or expanded view */
+        renderEvaluationResult()
       )}
+      
+      {/* Overlay backdrop for expanded view */}
+      {expandedView && <div className="expanded-backdrop" onClick={toggleExpandedView}></div>}
     </div>
   );
 };
