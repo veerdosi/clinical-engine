@@ -34,23 +34,23 @@ const TimelineVisualization = ({ timelineData, efficiencyMetrics }) => {
   const getActivityIcon = (type) => {
     switch (type) {
       case 'session_start':
-        return '🏁';
+        return '';
       case 'patient_interaction':
-        return '💬';
+        return '';
       case 'physical_exam':
-        return '👨‍⚕️';
+        return '';
       case 'verified_procedure':
-        return '✓';
+        return '';
       case 'test_order':
-        return '🧪';
+        return '';
       case 'imaging_order':
-        return '📷';
+        return '';
       case 'notes_update':
-        return '📝';
+        return '';
       case 'diagnosis_submission':
-        return '🏆';
+        return '';
       default:
-        return '•';
+        return '';
     }
   };
 
