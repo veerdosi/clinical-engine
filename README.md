@@ -88,7 +88,7 @@
 
 5. **Run the Backend Server:**
    ```bash
-   python main.py
+   python -m backend.main
    ```
    The backend server will run on http://127.0.0.1:5000.
 
