@@ -241,13 +241,6 @@ class ExamModal extends React.Component {
                     ) : (
                       <p>No significant findings.</p>
                     )}
-                    
-                    {examResults.interpretation && (
-                      <div className="exam-interpretation">
-                        <h5>Interpretation</h5>
-                        <p>{examResults.interpretation}</p>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
