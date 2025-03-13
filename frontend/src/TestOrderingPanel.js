@@ -266,9 +266,6 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
             />
             {(selectedTab === 'imaging' || selectedTab === 'procedure') && (
               <div className="custom-test-note">
-                <p>
-                  <strong>Note:</strong> Specialized {selectedTab === 'procedure' ? 'procedures' : 'studies'} will provide text reports only.
-                </p>
               </div>
             )}
           </div>
