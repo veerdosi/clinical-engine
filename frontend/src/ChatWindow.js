@@ -216,9 +216,22 @@ const ChatWindow = ({
             {msg.hasAudio && !preferVoiceResponse && msg.audio && (
               <button 
                 className="play-audio-btn"
-                onClick={() => {
-                  const audio = new Audio("data:audio/mpeg;base64," + msg.audio);
-                  audio.play();
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent event bubbling
+                  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                  // Create a brief silent sound to unblock audio
+                  const oscillator = audioContext.createOscillator();
+                  oscillator.connect(audioContext.destination);
+                  oscillator.start();
+                  oscillator.stop(audioContext.currentTime + 0.001);
+                  
+                  // Then play the actual audio with a small delay
+                  setTimeout(() => {
+                    const audio = new Audio("data:audio/mpeg;base64," + msg.audio);
+                    audio.play().catch(err => {
+                      console.error("Error playing audio despite user interaction:", err);
+                    });
+                  }, 100);
                 }}
               >
                 🔊 Play response
