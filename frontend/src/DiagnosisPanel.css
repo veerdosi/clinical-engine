@@ -1,3 +1,5 @@
+/* Complete rewrite of DiagnosisPanel.css with fixed fullscreen implementation */
+
 .diagnosis-panel {
   background-color: #f7f9fc;
   border: 1px solid #dbe1ef;
@@ -173,7 +175,7 @@
   background-color: #2c3e50;
 }
 
-/* New styles for workflow section */
+/* Workflow section */
 .workflow-section {
   margin: 1.5rem 0;
 }
@@ -199,298 +201,132 @@
   flex: 1;
 }
 
-/* Add these styles to your existing DiagnosisPanel.css file */
+/* ===== MODAL FULLSCREEN IMPLEMENTATION ===== */
 
-.score-table-container {
-  margin: 1.5rem 0;
-  border-radius: 8px;
-  overflow: hidden;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.score-table-container h3 {
-  margin: 0;
-  padding: 1rem;
-  background-color: #f1f5f9;
-  color: #334155;
-  font-size: 1.1rem;
-  text-align: center;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.evaluation-score-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.evaluation-score-table th,
-.evaluation-score-table td {
-  padding: 0.8rem;
-  border-bottom: 1px solid #e2e8f0;
-  text-align: left;
-}
-
-.evaluation-score-table th {
-  background-color: #f8fafc;
-  color: #475569;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.evaluation-score-table th:first-child {
-  width: 30%;
-}
-
-.evaluation-score-table th:nth-child(2) {
-  width: 15%;
-  text-align: center;
-}
-
-.evaluation-score-table th:last-child {
-  width: 55%;
-}
-
-.evaluation-score-table td:nth-child(2) {
-  text-align: center;
-  font-weight: 600;
-}
-
-.good-score {
-  background-color: #f0fdf4;
-}
-
-.good-score td:nth-child(2) {
-  color: #166534;
-}
-
-.average-score {
-  background-color: #fefce8;
-}
-
-.average-score td:nth-child(2) {
-  color: #854d0e;
-}
-
-.poor-score {
-  background-color: #fef2f2;
-}
-
-.poor-score td:nth-child(2) {
-  color: #b91c1c;
-}
-
-.overall-score {
-  background-color: #f8fafc;
-}
-
-.overall-score td {
-  border-bottom: none;
-}
-
-.evaluation-summary {
-  margin: 1.5rem 0;
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.evaluation-summary h3 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  color: #334155;
-  font-size: 1.1rem;
-  text-align: center;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.strengths-section,
-.improvements-section {
-  margin-bottom: 1.5rem;
-}
-
-.evaluation-summary h4 {
-  margin-top: 0;
-  margin-bottom: 0.8rem;
-  color: #475569;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.strengths-list,
-.improvements-list {
-  margin: 0;
-  padding-left: 1.5rem;
-}
-
-.strengths-list li,
-.improvements-list li {
-  margin-bottom: 0.5rem;
-  line-height: 1.5;
-}
-
-.positive {
-  color: #166534;
-}
-
-.negative {
-  color: #b91c1c;
-}
-
-.toggle-timeline-btn {
-  display: block;
-  width: 100%;
-  padding: 0.8rem 1rem;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-weight: 600;
-  cursor: pointer;
-  margin: 1rem 0;
-  transition: background-color 0.2s;
-}
-
-.toggle-timeline-btn:hover {
-  background-color: #2980b9;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .evaluation-score-table th:first-child,
-  .evaluation-score-table th:nth-child(2),
-  .evaluation-score-table th:last-child {
-    width: auto;
-  }
-  
-  .evaluation-score-table th,
-  .evaluation-score-table td {
-    padding: 0.6rem;
-    font-size: 0.9rem;
-  }
-}
-
-/* Add these styles to your existing DiagnosisPanel.css file */
-
-/* Full-screen expansion styles */
-.diagnosis-panel.expanded-fullscreen {
+/* Modal overlay styles */
+.diagnosis-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
   height: 100vh;
-  background-color: white;
-  z-index: 9999;
-  overflow-y: auto;
-  padding: 2rem;
-  animation: expandPanel 0.3s ease-in-out;
-}
-
-@keyframes expandPanel {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Header with controls for expanding/closing */
-.diagnosis-header-controls {
+  background-color: rgba(0, 0, 0, 0.75);
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  margin-bottom: 1.5rem;
+  z-index: 9999;
+  padding: 20px;
+  box-sizing: border-box;
+  animation: fadeIn 0.2s ease-in;
 }
 
-.diagnosis-header-controls h4 {
-  margin: 0;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.expand-view-btn,
-.close-expanded-btn {
+/* Modal content container */
+.diagnosis-modal-content {
+  background-color: white;
+  width: 100%;
+  max-width: 1200px;
+  height: 90vh;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  overflow: auto;
+  position: relative;
+  animation: slideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideIn {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Modal close button */
+.diagnosis-modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: 24px;
+  line-height: 1;
+  color: #e74c3c;
   cursor: pointer;
-  padding: 0.4rem;
-  border-radius: 4px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  z-index: 10;
+}
+
+.diagnosis-modal-close:hover {
+  background-color: rgba(231, 76, 60, 0.1);
+}
+
+/* Modal header */
+.diagnosis-modal-header {
+  padding: 20px 25px;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.diagnosis-modal-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #2c3e50;
+}
+
+/* Modal body */
+.diagnosis-modal-body {
+  padding: 25px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Modal footer */
+.diagnosis-modal-footer {
+  padding: 15px 25px;
+  border-top: 1px solid #eaeaea;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Expand button in normal view */
+.expand-view-btn {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #3498db;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.expand-view-btn {
-  color: #3498db;
-}
-
-.close-expanded-btn {
-  color: #e74c3c;
-}
-
-.expand-view-btn:hover,
-.close-expanded-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+.expand-view-btn:hover {
+  background-color: rgba(52, 152, 219, 0.1);
 }
 
 .expand-icon {
   font-size: 1.5rem;
-}
-
-.close-icon {
-  font-size: 1.8rem;
-}
-
-/* Semi-transparent backdrop for expanded view */
-.expanded-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 9998;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* Adjustments to the diagnosis result content in expanded view */
-.expanded-fullscreen .diagnosis-result {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0;
-  box-shadow: none;
-  border: none;
-}
-
-.expanded-fullscreen .score-table-container {
-  margin: 2rem 0;
-}
-
-.expanded-fullscreen .evaluation-summary {
-  margin: 2rem 0;
-}
-
-.expanded-fullscreen .workflow-section {
-  margin: 2rem 0;
-}
-
-.expanded-fullscreen .button-group {
-  margin-top: 2.5rem;
 }
 
 /* Score table styles */
@@ -633,28 +469,16 @@
   color: #b91c1c;
 }
 
-.toggle-timeline-btn {
-  display: block;
-  width: 100%;
-  padding: 0.8rem 1rem;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-weight: 600;
-  cursor: pointer;
-  margin: 1rem 0;
-  transition: background-color 0.2s;
-}
-
-.toggle-timeline-btn:hover {
-  background-color: #2980b9;
-}
-
-/* Responsive adjustments */
+/* Fixed modal for mobile - fullscreen on mobile */
 @media (max-width: 768px) {
-  .diagnosis-panel.expanded-fullscreen {
-    padding: 1rem;
+  .diagnosis-modal-overlay {
+    padding: 0;
+  }
+  
+  .diagnosis-modal-content {
+    height: 100vh;
+    max-width: 100%;
+    border-radius: 0;
   }
   
   .evaluation-score-table th:first-child,

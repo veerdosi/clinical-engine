@@ -1,4 +1,7 @@
+// Completely rewritten DiagnosisPanel.js with fixed fullscreen modal implementation
+
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import './DiagnosisPanel.css';
 import TimelineVisualization from './TimelineVisualization';
 
@@ -8,32 +11,62 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
-  const [expandedView, setExpandedView] = useState(false);
-
-  // When diagnosis is submitted, set expanded view after a short delay
+  const [showModal, setShowModal] = useState(false);
+  
+  // When diagnosis is submitted and we have a result, automatically show modal after a delay
   useEffect(() => {
     if (isSubmitted && result) {
-      // Short delay to allow animation to work smoothly
       const timer = setTimeout(() => {
-        setExpandedView(true);
+        setShowModal(true);
       }, 300);
       return () => clearTimeout(timer);
     }
   }, [isSubmitted, result]);
 
-  // Handle ESC key to exit expanded view
+  // Handle body scroll lock when modal is open
   useEffect(() => {
-    const handleEsc = (event) => {
-      if (event.keyCode === 27 && expandedView) {
-        setExpandedView(false);
+    if (showModal) {
+      // Save current scroll position and lock scroll
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Restore scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+      
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0', 10) * -1);
+      }
+    }
+    
+    // Clean up function
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.body.style.overflow = '';
+    };
+  }, [showModal]);
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscKey = (event) => {
+      if (event.key === 'Escape' && showModal) {
+        setShowModal(false);
       }
     };
-    window.addEventListener('keydown', handleEsc);
     
+    window.addEventListener('keydown', handleEscKey);
     return () => {
-      window.removeEventListener('keydown', handleEsc);
+      window.removeEventListener('keydown', handleEscKey);
     };
-  }, [expandedView]);
+  }, [showModal]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,9 +89,7 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
 
       const response = await fetch('/api/submit-diagnosis', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           diagnosis: diagnosis.trim(),
           case_id: case_info.id || 'current',
@@ -96,7 +127,7 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
     setIsSubmitted(false);
     setResult(null);
     setShowTimeline(false);
-    setExpandedView(false);
+    setShowModal(false);
     await onNewCase();
   };
   
@@ -104,8 +135,53 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
     setShowTimeline(!showTimeline);
   };
 
-  const toggleExpandedView = () => {
-    setExpandedView(!expandedView);
+  const toggleModal = () => {
+    setShowModal(!showModal);
+  };
+
+  const getAssessmentText = (category, score) => {
+    if (score === 0) {
+      switch(category) {
+        case "documentation":
+          return "No patient notes created";
+        case "physical_exam":
+          return "No examinations performed";
+        default:
+          return "No evaluation possible";
+      }
+    }
+    
+    if (score >= 9) return "Exceptional";
+    if (score >= 8) return "Very Good";
+    if (score >= 6) return "Adequate";
+    if (score >= 4) return "Needs Improvement";
+    return "Significantly Below Expectations";
+  };
+  
+  const calculateOverallScore = (scores) => {
+    // Define weights for different categories
+    const weights = {
+      diagnosis_accuracy: 0.25,
+      communication: 0.15,
+      exam_thoroughness: 0.15,
+      clinical_reasoning: 0.20,
+      notes_completeness: 0.10,
+      workflow_efficiency: 0.15
+    };
+    
+    let weightedScore = 0;
+    let totalWeight = 0;
+    
+    // Calculate weighted sum
+    for (const [category, weight] of Object.entries(weights)) {
+      if (scores[category] !== undefined) {
+        weightedScore += scores[category] * weight;
+        totalWeight += weight;
+      }
+    }
+    
+    // Return rounded weighted average
+    return totalWeight > 0 ? Math.round(weightedScore / totalWeight) : 0;
   };
 
   const renderScoreTable = () => {
@@ -166,53 +242,6 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
     );
   };
   
-  // Helper function to get assessment text based on score
-  const getAssessmentText = (category, score) => {
-    if (score === 0) {
-      switch(category) {
-        case "documentation":
-          return "No patient notes created";
-        case "physical_exam":
-          return "No examinations performed";
-        default:
-          return "No evaluation possible";
-      }
-    }
-    
-    if (score >= 9) return "Exceptional";
-    if (score >= 8) return "Very Good";
-    if (score >= 6) return "Adequate";
-    if (score >= 4) return "Needs Improvement";
-    return "Significantly Below Expectations";
-  };
-  
-  // Calculate overall score as weighted average
-  const calculateOverallScore = (scores) => {
-    // Define weights for different categories
-    const weights = {
-      diagnosis_accuracy: 0.25,
-      communication: 0.15,
-      exam_thoroughness: 0.15,
-      clinical_reasoning: 0.20,
-      notes_completeness: 0.10,
-      workflow_efficiency: 0.15
-    };
-    
-    let weightedScore = 0;
-    let totalWeight = 0;
-    
-    // Calculate weighted sum
-    for (const [category, weight] of Object.entries(weights)) {
-      if (scores[category] !== undefined) {
-        weightedScore += scores[category] * weight;
-        totalWeight += weight;
-      }
-    }
-    
-    // Return rounded weighted average
-    return totalWeight > 0 ? Math.round(weightedScore / totalWeight) : 0;
-  };
-  
   const renderStrengthsAndAreas = () => {
     if (!result) return null;
     
@@ -268,84 +297,72 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
       </div>
     );
   };
-  
-  // Render evaluation result either in normal view or expanded view
-  const renderEvaluationResult = () => {
-    return (
-      <div className={`diagnosis-result ${result.correct ? 'correct' : 'incorrect'}`}>
-        <div className="diagnosis-header-controls">
-          <h4>{result.correct ? '✅ Correct Diagnosis!' : '❌ Incorrect Diagnosis'}</h4>
-          
-          {/* Show toggle button only in normal view */}
-          {!expandedView && (
-            <button 
-              className="expand-view-btn" 
-              onClick={toggleExpandedView}
-              title="Expand to full screen"
-            >
-              <span className="expand-icon">⛶</span>
-            </button>
-          )}
-          
-          {/* Show close button only in expanded view */}
-          {expandedView && (
-            <button 
-              className="close-expanded-btn" 
-              onClick={toggleExpandedView}
-              title="Exit full screen"
-            >
-              <span className="close-icon">×</span>
-            </button>
-          )}
-        </div>
-        
-        <div className="diagnosis-details">
-          <p><strong>Your diagnosis:</strong> {diagnosis}</p>
-          <p><strong>Correct diagnosis:</strong> {result.actual_diagnosis}</p>
-        </div>
-        
-        {/* Render the score table */}
-        {renderScoreTable()}
-        
-        {/* Render strengths and improvement areas */}
-        {renderStrengthsAndAreas()}
-        
-        <div className="workflow-section">
+
+  // Modal component that will be rendered at the root level
+  const FullscreenModal = () => {
+    return ReactDOM.createPortal(
+      <div className="diagnosis-modal-overlay">
+        <div className="diagnosis-modal-content">
           <button 
-            className="toggle-timeline-btn" 
-            onClick={toggleTimeline}
+            className="diagnosis-modal-close" 
+            onClick={toggleModal}
+            aria-label="Close dialog"
           >
-            {showTimeline ? 'Hide Timeline' : 'Show Clinical Workflow Timeline'}
+            &times;
           </button>
           
-          {showTimeline && result.timeline_data && (
-            <TimelineVisualization 
-              timelineData={result.timeline_data} 
-              efficiencyMetrics={result.efficiency_metrics}
-            />
-          )}
-        </div>
-        
-        <div className="button-group">
-          <button className="new-case-btn" onClick={handleNewCase}>
-            Start New Case
-          </button>
+          <div className="diagnosis-modal-header">
+            <h3>{result.correct ? '✅ Correct Diagnosis!' : '❌ Incorrect Diagnosis'}</h3>
+          </div>
           
-          {/* Add this button if onReturnToSelection prop is provided */}
-          {onReturnToSelection && (
-            <button className="selection-btn" onClick={onReturnToSelection}>
-              Return to Case Selection
+          <div className="diagnosis-modal-body">
+            <div className="diagnosis-details">
+              <p><strong>Your diagnosis:</strong> {diagnosis}</p>
+              <p><strong>Correct diagnosis:</strong> {result.actual_diagnosis}</p>
+            </div>
+            
+            {renderScoreTable()}
+            {renderStrengthsAndAreas()}
+            
+            <div className="workflow-section">
+              <button 
+                className="toggle-timeline-btn" 
+                onClick={toggleTimeline}
+              >
+                {showTimeline ? 'Hide Timeline' : 'Show Clinical Workflow Timeline'}
+              </button>
+              
+              {showTimeline && result.timeline_data && (
+                <TimelineVisualization 
+                  timelineData={result.timeline_data} 
+                  efficiencyMetrics={result.efficiency_metrics}
+                />
+              )}
+            </div>
+          </div>
+          
+          <div className="diagnosis-modal-footer">
+            <button className="new-case-btn" onClick={handleNewCase}>
+              Start New Case
             </button>
-          )}
+            
+            {onReturnToSelection && (
+              <button className="selection-btn" onClick={onReturnToSelection}>
+                Return to Case Selection
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      </div>,
+      document.body // Mount directly to body to avoid positioning issues
     );
   };
 
+  // Normal panel content
   return (
-    <div className={`diagnosis-panel ${expandedView ? 'expanded-fullscreen' : ''}`}>
+    <div className="diagnosis-panel">
       {!isSubmitted ? (
-        /* Normal view when diagnosis hasn't been submitted yet */
+        /* Form view when diagnosis hasn't been submitted yet */
         <>
           <div className="diagnosis-header">
             <h3>Medical Diagnosis</h3>
@@ -370,12 +387,34 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
           </form>
         </>
       ) : (
-        /* Evaluation results - shown in either normal or expanded view */
-        renderEvaluationResult()
+        /* Result view with expand button */
+        <div className={`diagnosis-result ${result.correct ? 'correct' : 'incorrect'}`}>
+          <div className="diagnosis-header-controls">
+            <h4>{result.correct ? '✅ Correct Diagnosis!' : '❌ Incorrect Diagnosis'}</h4>
+            <button 
+              className="expand-view-btn" 
+              onClick={toggleModal}
+              title="View full evaluation"
+            >
+              <span className="expand-icon">⛶</span>
+            </button>
+          </div>
+          
+          <div className="diagnosis-details">
+            <p><strong>Your diagnosis:</strong> {diagnosis}</p>
+            <p><strong>Correct diagnosis:</strong> {result.actual_diagnosis}</p>
+          </div>
+          
+          <div className="button-group">
+            <button className="new-case-btn" onClick={handleNewCase}>
+              Start New Case
+            </button>
+          </div>
+        </div>
       )}
       
-      {/* Overlay backdrop for expanded view */}
-      {expandedView && <div className="expanded-backdrop" onClick={toggleExpandedView}></div>}
+      {/* Render modal when showModal is true */}
+      {showModal && <FullscreenModal />}
     </div>
   );
 };
