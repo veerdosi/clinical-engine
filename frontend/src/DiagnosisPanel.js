@@ -50,7 +50,6 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
       setShowTimeline(true);
       
       // Notify parent component that diagnosis has been submitted
-      // Pass the result data to allow parent to access timeline data
       if (onDiagnosisSubmitted) {
         onDiagnosisSubmitted(data);
       }
@@ -76,6 +75,167 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
   
   const toggleTimeline = () => {
     setShowTimeline(!showTimeline);
+  };
+
+  const renderScoreTable = () => {
+    if (!result || !result.scores) return null;
+    
+    const scores = result.scores;
+    
+    return (
+      <div className="score-table-container">
+        <h3>Clinical Performance Scores</h3>
+        <table className="evaluation-score-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Score</th>
+              <th>Assessment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className={scores.diagnosis_accuracy >= 8 ? "good-score" : scores.diagnosis_accuracy >= 6 ? "average-score" : "poor-score"}>
+              <td>Diagnosis Accuracy</td>
+              <td>{scores.diagnosis_accuracy}/10</td>
+              <td>{getAssessmentText("diagnosis_accuracy", scores.diagnosis_accuracy)}</td>
+            </tr>
+            <tr className={scores.communication >= 8 ? "good-score" : scores.communication >= 6 ? "average-score" : "poor-score"}>
+              <td>Communication Skills</td>
+              <td>{scores.communication}/10</td>
+              <td>{getAssessmentText("communication", scores.communication)}</td>
+            </tr>
+            <tr className={scores.exam_thoroughness >= 8 ? "good-score" : scores.exam_thoroughness >= 6 ? "average-score" : "poor-score"}>
+              <td>Physical Examination</td>
+              <td>{scores.exam_thoroughness}/10</td>
+              <td>{getAssessmentText("physical_exam", scores.exam_thoroughness)}</td>
+            </tr>
+            <tr className={scores.clinical_reasoning >= 8 ? "good-score" : scores.clinical_reasoning >= 6 ? "average-score" : "poor-score"}>
+              <td>Clinical Reasoning</td>
+              <td>{scores.clinical_reasoning}/10</td>
+              <td>{getAssessmentText("clinical_reasoning", scores.clinical_reasoning)}</td>
+            </tr>
+            <tr className={scores.notes_completeness >= 8 ? "good-score" : scores.notes_completeness >= 6 ? "average-score" : "poor-score"}>
+              <td>Documentation</td>
+              <td>{scores.notes_completeness}/10</td>
+              <td>{getAssessmentText("documentation", scores.notes_completeness)}</td>
+            </tr>
+            <tr className={scores.workflow_efficiency >= 8 ? "good-score" : scores.workflow_efficiency >= 6 ? "average-score" : "poor-score"}>
+              <td>Workflow Efficiency</td>
+              <td>{scores.workflow_efficiency}/10</td>
+              <td>{getAssessmentText("workflow", scores.workflow_efficiency)}</td>
+            </tr>
+            <tr className="overall-score">
+              <td><strong>Overall Performance</strong></td>
+              <td><strong>{calculateOverallScore(scores)}/10</strong></td>
+              <td>{getAssessmentText("overall", calculateOverallScore(scores))}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+  
+  // Helper function to get assessment text based on score
+  const getAssessmentText = (category, score) => {
+    if (score === 0) {
+      switch(category) {
+        case "documentation":
+          return "No patient notes created";
+        case "physical_exam":
+          return "No examinations performed";
+        default:
+          return "No evaluation possible";
+      }
+    }
+    
+    if (score >= 9) return "Exceptional";
+    if (score >= 8) return "Very Good";
+    if (score >= 6) return "Adequate";
+    if (score >= 4) return "Needs Improvement";
+    return "Significantly Below Expectations";
+  };
+  
+  // Calculate overall score as weighted average
+  const calculateOverallScore = (scores) => {
+    // Define weights for different categories
+    const weights = {
+      diagnosis_accuracy: 0.25,
+      communication: 0.15,
+      exam_thoroughness: 0.15,
+      clinical_reasoning: 0.20,
+      notes_completeness: 0.10,
+      workflow_efficiency: 0.15
+    };
+    
+    let weightedScore = 0;
+    let totalWeight = 0;
+    
+    // Calculate weighted sum
+    for (const [category, weight] of Object.entries(weights)) {
+      if (scores[category] !== undefined) {
+        weightedScore += scores[category] * weight;
+        totalWeight += weight;
+      }
+    }
+    
+    // Return rounded weighted average
+    return totalWeight > 0 ? Math.round(weightedScore / totalWeight) : 0;
+  };
+  
+  const renderStrengthsAndAreas = () => {
+    if (!result) return null;
+    
+    return (
+      <div className="evaluation-summary">
+        <h3>Detailed Feedback</h3>
+        
+        {result.strengths && result.strengths.length > 0 && (
+          <div className="strengths-section">
+            <h4>Strengths:</h4>
+            <ul className="strengths-list">
+              {result.strengths.map((strength, index) => (
+                <li key={`strength-${index}`} className="positive">{strength}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        <div className="improvements-section">
+          <h4>Areas Needing Improvement:</h4>
+          <ul className="improvements-list">
+            {result.interaction_improvements && result.interaction_improvements.length > 0 && (
+              <li className="negative">
+                <strong>Patient Interaction:</strong> {result.interaction_improvements[0]}
+              </li>
+            )}
+            
+            {result.missed_key_exams && result.missed_key_exams.length > 0 && (
+              <li className="negative">
+                <strong>Physical Examination:</strong> Missed critical examinations ({result.missed_key_exams.join(', ')})
+              </li>
+            )}
+            
+            {result.missed_critical_tests && result.missed_critical_tests.length > 0 && (
+              <li className="negative">
+                <strong>Test Selection:</strong> Failed to order required tests ({result.missed_critical_tests.join(', ')})
+              </li>
+            )}
+            
+            {result.notes_improvements && result.notes_improvements.length > 0 && (
+              <li className="negative">
+                <strong>Documentation:</strong> {result.notes_improvements[0]}
+              </li>
+            )}
+            
+            {result.workflow_improvements && result.workflow_improvements.length > 0 && (
+              <li className="negative">
+                <strong>Clinical Workflow:</strong> {result.workflow_improvements[0]}
+              </li>
+            )}
+          </ul>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -111,10 +271,11 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
             <p><strong>Correct diagnosis:</strong> {result.actual_diagnosis}</p>
           </div>
           
-          <div className="feedback">
-            <h5>Feedback:</h5>
-            <p>{result.feedback}</p>
-          </div>
+          {/* Render the new score table */}
+          {renderScoreTable()}
+          
+          {/* Render strengths and improvement areas */}
+          {renderStrengthsAndAreas()}
           
           <div className="workflow-section">
             <button 
@@ -130,56 +291,6 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
                 efficiencyMetrics={result.efficiency_metrics}
               />
             )}
-          </div>
-          
-          <div className="evaluation-summary">
-            <h5>Performance Summary:</h5>
-            <ul>
-              {/* Original evaluation items */}
-              {result.key_findings_identified && (
-                <li className="positive">Identified key findings</li>
-              )}
-              {result.missed_key_findings && result.missed_key_findings.length > 0 && (
-                <li className="negative">Missed important symptoms: {result.missed_key_findings.join(', ')}</li>
-              )}
-              {result.unnecessary_tests && result.unnecessary_tests.length > 0 && (
-                <li className="negative">Ordered unnecessary tests: {result.unnecessary_tests.join(', ')}</li>
-              )}
-              {result.critical_tests_ordered && (
-                <li className="positive">Ordered all critical tests</li>
-              )}
-              {result.missed_critical_tests && result.missed_critical_tests.length > 0 && (
-                <li className="negative">Failed to order critical tests: {result.missed_critical_tests.join(', ')}</li>
-              )}
-              
-              {/* Add notes evaluation items */}
-              {result.notes_strengths && result.notes_strengths.length > 0 && (
-                <li className="positive">Documentation strength: {result.notes_strengths[0]}</li>
-              )}
-              {result.notes_improvements && result.notes_improvements.length > 0 && (
-                <li className="negative">Documentation needs improvement: {result.notes_improvements[0]}</li>
-              )}
-              {result.overall_notes_score > 0 ? (
-                <li className={result.overall_notes_score >= 7 ? "positive" : "negative"}>
-                  Documentation score: {result.overall_notes_score}/10
-                </li>
-              ) : (
-                <li className="negative">No patient notes created</li>
-              )}
-              
-              {/* Add workflow evaluation items */}
-              {result.workflow_strengths && result.workflow_strengths.length > 0 && (
-                <li className="positive">Workflow strength: {result.workflow_strengths[0]}</li>
-              )}
-              {result.workflow_improvements && result.workflow_improvements.length > 0 && (
-                <li className="negative">Workflow needs improvement: {result.workflow_improvements[0]}</li>
-              )}
-              {result.overall_workflow_score > 0 ? (
-                <li className={result.overall_workflow_score >= 7 ? "positive" : "negative"}>
-                  Clinical workflow score: {result.overall_workflow_score}/10
-                </li>
-              ) : null}
-            </ul>
           </div>
           
           <div className="button-group">

@@ -43,22 +43,52 @@ Case Information:
 
 The student's workflow timeline has been analyzed, and you have access to their activity sequence and timing metrics.
 
-Evaluate the following aspects:
-1. Workflow efficiency: Was time used effectively? Were there long idle periods?
-2. Appropriate prioritization: Were urgent tests/exams performed first?
-3. Logical progression: Did the workflow follow a sensible clinical approach?
-4. Adherence to guidelines: Did the sequence align with standard clinical protocols?
-5. Recognition of time-sensitivity: For urgent cases, was time managed appropriately?
+Please evaluate the following aspects using a clear 1-10 scale where:
+1-3 = Poor/Insufficient
+4-6 = Adequate/Meets Expectations
+7-8 = Good/Above Expectations
+9-10 = Excellent/Exceptional
+
+Evaluation Rubric:
+1. Workflow Efficiency (1-10):
+   * 1-3: Significant idle time, obvious delays, very inefficient
+   * 4-6: Reasonable workflow with some inefficiencies
+   * 7-8: Efficient workflow with minimal idle time
+   * 9-10: Highly optimized workflow, excellent time management
+
+2. Appropriate Prioritization (1-10):
+   * 1-3: Critical tests/exams performed late or not at all
+   * 4-6: Some prioritization issues but critical elements addressed
+   * 7-8: Good prioritization with logical sequence
+   * 9-10: Excellent prioritization, addressing urgent needs first
+
+3. Logical Progression (1-10):
+   * 1-3: Disorganized approach, jumping between unrelated activities
+   * 4-6: Generally logical progression with some inconsistencies
+   * 7-8: Systematic approach following clinical guidelines
+   * 9-10: Exemplary progression demonstrating expert clinical reasoning
+
+4. Adherence to Guidelines (1-10):
+   * 1-3: Significant deviations from standard protocols
+   * 4-6: Mostly follows guidelines with some deviations
+   * 7-8: Good adherence to standard protocols
+   * 9-10: Perfect adherence to guidelines and best practices
+
+5. Time-Sensitivity Recognition (1-10):
+   * 1-3: No urgency shown for time-sensitive case
+   * 4-6: Some recognition of urgency but incomplete response
+   * 7-8: Good recognition of time-sensitivity with appropriate response
+   * 9-10: Excellent handling of time-sensitive elements
 
 Generate a comprehensive evaluation as a JSON object with:
-- efficiency_score: int (1-10)
-- prioritization_score: int (1-10) 
-- logical_progression_score: int (1-10)
-- guideline_adherence_score: int (1-10)
-- time_sensitivity_score: int (1-10)
-- overall_workflow_score: int (1-10)
-- strengths: array of strings
-- areas_for_improvement: array of strings
+- efficiency_score: int (1-10) based on the above rubric
+- prioritization_score: int (1-10) based on the above rubric
+- logical_progression_score: int (1-10) based on the above rubric
+- guideline_adherence_score: int (1-10) based on the above rubric
+- time_sensitivity_score: int (1-10) based on the above rubric
+- overall_workflow_score: int (1-10) weighted average of above
+- strengths: array of strings (specific examples of good performance)
+- areas_for_improvement: array of strings (specific areas needing work)
 - feedback: string with assessment and advice
 """
         
@@ -266,23 +296,56 @@ class InteractionEvaluator:
             
 Case context: {case_info.get('presenting_complaint', 'Unknown complaint')}, {case_info.get('difficulty', 'moderate')} difficulty.
 
-You have access to the transcript of the student's interactions with a virtual patient. Evaluate the following aspects:
-1. Communication skills (clarity, listening, question quality)
-2. Empathy and rapport building
-3. Medical interview technique (organization, thoroughness, efficiency)
+You have access to the transcript of the student's interactions with a virtual patient.
 
-Rate each area on a scale of 1-10.
+Please evaluate the following aspects using a clear 1-10 scale where:
+1-3 = Poor/Insufficient
+4-6 = Adequate/Meets Expectations  
+7-8 = Good/Above Expectations
+9-10 = Excellent/Exceptional
+
+Communication Skills Rubric:
+1. Clarity and Organization (1-10):
+   * 1-3: Unclear questions, disorganized interview
+   * 4-6: Mostly clear with reasonable organization
+   * 7-8: Clear communication with logical flow
+   * 9-10: Exceptional clarity and highly organized approach
+
+2. Active Listening (1-10):
+   * 1-3: Frequently interrupts or misses cues
+   * 4-6: Sometimes acknowledges patient responses
+   * 7-8: Demonstrates good listening and follow-up questions
+   * 9-10: Exceptional listening skills with perfect response integration
+
+3. Question Quality (1-10):
+   * 1-3: Vague or closed questions that limit information gathering
+   * 4-6: Mix of effective and ineffective questioning
+   * 7-8: Mostly open-ended, relevant questions
+   * 9-10: Perfect blend of open/closed questions with excellent follow-up
+
+4. Empathy and Rapport (1-10):
+   * 1-3: No evidence of empathy or rapport-building
+   * 4-6: Basic attempts at rapport with some empathetic statements
+   * 7-8: Good empathy with effective rapport-building
+   * 9-10: Exceptional empathy and rapport throughout interaction
+
+5. Interview Technique (1-10):
+   * 1-3: Missing many key history elements
+   * 4-6: Covers basic elements but lacks thoroughness
+   * 7-8: Thorough history with good organization
+   * 9-10: Comprehensive, highly efficient history-taking
+
 Identify specific strengths and areas for improvement with examples from the transcript.
 Provide actionable feedback to help the student improve.
 
 Return a JSON object with these fields:
-- communication_score: int (1-10)
-- empathy_score: int (1-10)
-- interview_technique_score: int (1-10)
-- overall_interaction_score: int (1-10)
-- strengths: array of strings
-- areas_for_improvement: array of strings
-- feedback: string with overall assessment and advice
+- communication_score: int (1-10) average of clarity, listening and question quality
+- empathy_score: int (1-10) from empathy rubric
+- interview_technique_score: int (1-10) from technique rubric
+- overall_interaction_score: int (1-10) weighted average of all scores
+- strengths: array of specific examples from the transcript showing good skills
+- areas_for_improvement: array of specific examples that could be improved
+- feedback: string with overall assessment and specific advice
 """
 
             # Call LLM for evaluation
@@ -391,27 +454,59 @@ Case context:
 - Relevant symptoms: {json.dumps(symptoms)}
 - Vital signs: {json.dumps(vitals)}
 
-You have access to the student's SOAP notes. Evaluate the following aspects:
-1. Completeness (1-10): Inclusion of all relevant findings and information
-2. Organization and structure (1-10): Proper use of SOAP format with information in correct sections
-3. Accuracy (1-10): Correctness of recorded information compared to the case details
-4. Medical terminology (1-10): Appropriate use of medical language and terminology
-5. Assessment and plan (1-10): Logical assessment and plan based on findings, identification of key clinical issues
+You have access to the student's SOAP notes.
+
+Please evaluate the following aspects using a clear 1-10 scale where:
+1-3 = Poor/Insufficient
+4-6 = Adequate/Meets Expectations  
+7-8 = Good/Above Expectations
+9-10 = Excellent/Exceptional
+
+SOAP Notes Evaluation Rubric:
+1. Completeness (1-10): 
+    * 1-3: Critical information missing
+    * 4-6: Most key information included but some gaps
+    * 7-8: Comprehensive with minor omissions
+    * 9-10: Exceptionally complete with all relevant information
+
+2. Organization and structure (1-10):
+    * 1-3: Poor SOAP format adherence, information in wrong sections
+    * 4-6: Basic format followed but some misplaced information
+    * 7-8: Well-organized with proper section usage
+    * 9-10: Perfect organization with exemplary structure
+
+3. Accuracy (1-10): 
+    * 1-3: Contains significant factual errors
+    * 4-6: Mostly accurate with minor errors
+    * 7-8: Highly accurate representation of findings
+    * 9-10: Perfect accuracy with no errors
+
+4. Medical terminology (1-10):
+    * 1-3: Inappropriate or incorrect terminology
+    * 4-6: Basic terminology with some errors
+    * 7-8: Appropriate terminology throughout
+    * 9-10: Sophisticated, precise terminology perfectly applied
+
+5. Assessment and plan (1-10):
+    * 1-3: Illogical or incomplete A&P
+    * 4-6: Basic assessment with reasonable plan
+    * 7-8: Thorough assessment with well-reasoned plan
+    * 9-10: Exceptional clinical reasoning with comprehensive plan
 
 Rate each area on a scale of 1-10.
 Identify specific strengths and areas for improvement with examples from the notes.
 Provide actionable feedback to help the student improve.
 
 Return a JSON object with these fields:
-- completeness_score: int (1-10)
-- organization_score: int (1-10)
-- accuracy_score: int (1-10)
-- terminology_score: int (1-10)
-- assessment_plan_score: int (1-10)
-- overall_notes_score: int (1-10)
-- strengths: array of strings
-- areas_for_improvement: array of strings
-- feedback: string with overall assessment and advice
+- completeness_score: int (1-10) from rubric
+- organization_score: int (1-10) from rubric
+- accuracy_score: int (1-10) from rubric
+- terminology_score: int (1-10) from rubric
+- assessment_plan_score: int (1-10) from rubric
+- overall_notes_score: int (1-10) weighted average of all scores
+- strengths: array of specific examples from notes showing strengths
+- areas_for_improvement: array of specific examples that could be improved
+- feedback: string with overall assessment and specific advice
 """
 
             # Call LLM for evaluation
@@ -516,25 +611,55 @@ Student's actions:
 - Imaging ordered: {json.dumps(list(ordered_imaging))}
 - Physical exams performed: {json.dumps(performed_exams)}
 
-Evaluate the following:
-1. Diagnostic accuracy (Is the diagnosis correct or close? Consider semantic similarity.)
-2. Test selection (Were appropriate tests ordered? Any unnecessary ones?)
-3. Physical examination thoroughness (Did they examine relevant body systems?)
-4. Resource utilization (Was testing efficient or excessive?)
-5. Clinical reasoning (Based on the diagnosis, exams, and tests ordered)
+Please evaluate the following aspects using a clear 1-10 scale where:
+1-3 = Poor/Insufficient
+4-6 = Adequate/Meets Expectations  
+7-8 = Good/Above Expectations
+9-10 = Excellent/Exceptional
+
+Clinical Decision-Making Rubric:
+1. Diagnostic accuracy (1-10):
+    * 1-3: Incorrect diagnosis with no relation to actual condition
+    * 4-6: Partially correct or related to correct diagnosis
+    * 7-8: Correct diagnosis with minor terminology issues
+    * 9-10: Perfectly accurate diagnosis
+
+2. Test selection (1-10):
+    * 1-3: Missing critical tests, many unnecessary tests
+    * 4-6: Some appropriate tests, some missing or unnecessary
+    * 7-8: Most appropriate tests ordered with few missed
+    * 9-10: Perfect test selection with no unnecessary tests
+
+3. Physical examination thoroughness (1-10):
+    * 1-3: Critical examinations missed
+    * 4-6: Basic examination performed but incomplete
+    * 7-8: Thorough examination with minor omissions
+    * 9-10: Comprehensive examination covering all relevant systems
+
+4. Resource utilization (1-10):
+    * 1-3: Highly inefficient, many unnecessary tests
+    * 4-6: Moderately efficient with some waste
+    * 7-8: Good efficiency with minimal waste
+    * 9-10: Perfectly efficient use of resources
+
+5. Clinical reasoning (1-10):
+    * 1-3: Poor reasoning with illogical approaches
+   `* 4-6: Basic reasoning with some logical connections
+   `* 7-8: Strong reasoning with good differential diagnosis
+   `* 9-10: Exceptional reasoning showing expert-level thinking
 
 Return a JSON object with:
 - diagnosis_correct: boolean
-- diagnosis_accuracy_score: int (1-10)
-- test_selection_score: int (1-10)
-- physical_exam_score: int (1-10)
-- efficiency_score: int (1-10)
-- clinical_reasoning_score: int (1-10)
-- overall_clinical_score: int (1-10)
-- missed_critical_tests: array of strings
-- unnecessary_tests: array of strings
-- missed_physical_exams: array of strings
-- feedback: string with assessment and recommendations
+- diagnosis_accuracy_score: int (1-10) from rubric
+- test_selection_score: int (1-10) from rubric
+- physical_exam_score: int (1-10) from rubric
+- efficiency_score: int (1-10) from rubric
+- clinical_reasoning_score: int (1-10) from rubric
+- overall_clinical_score: int (1-10) weighted average
+- missed_critical_tests: array of strings (specific tests that were missed)
+- unnecessary_tests: array of strings (specific tests that were unnecessary)
+- missed_physical_exams: array of strings (important exams that were missed)
+- feedback: string with specific assessment of reasoning and recommendations
 """
 
             # Call LLM for evaluation
@@ -734,29 +859,58 @@ Student's physical examinations:
 Student's verified examination procedures:
 {json.dumps(formatted_procedures, indent=2)}
 
-Evaluate the following aspects:
-1. Thoroughness (Did they perform all necessary examinations?)
-2. Relevance (Were the examinations chosen relevant to the case?)
-3. Efficiency (Did they avoid unnecessary examinations?)
-4. Sequence (Did they perform examinations in a logical order?)
-5. Procedural skill (Did they demonstrate knowledge of proper examination techniques?)
+Please evaluate the following aspects using a clear 1-10 scale where:
+1-3 = Poor/Insufficient
+4-6 = Adequate/Meets Expectations  
+7-8 = Good/Above Expectations
+9-10 = Excellent/Exceptional
 
-Rate each area on a scale of 1-10.
+Physical Examination Rubric:
+1. Thoroughness (1-10):
+   * 1-3: Critical systems not examined
+   * 4-6: Basic examination but missing some important elements
+   * 7-8: Thorough examination with minor omissions
+   * 9-10: Comprehensive exam covering all relevant systems
+
+2. Relevance (1-10):
+   * 1-3: Examinations not aligned with presenting complaint
+   * 4-6: Some relevant examinations performed
+   * 7-8: Mostly relevant examinations with clear purpose
+   * 9-10: Perfectly targeted examinations based on presentation
+
+3. Efficiency (1-10):
+   * 1-3: Many unnecessary examinations
+   * 4-6: Some unnecessary examinations
+   * 7-8: Few unnecessary examinations
+   * 9-10: Perfect efficiency with no wasted examinations
+
+4. Sequence (1-10):
+   * 1-3: Illogical examination sequence
+   * 4-6: Somewhat logical progression with some issues
+   * 7-8: Logical sequence following standard practice
+   * 9-10: Perfect sequence demonstrating expert approach
+
+5. Procedural Skill (1-10):
+   * 1-3: Poor technique in most procedures
+   * 4-6: Adequate technique with some errors
+   * 7-8: Good technique with proper steps
+   * 9-10: Perfect technique demonstrating mastery
+
 Identify specific strengths and areas for improvement.
 Provide actionable feedback to help the student improve.
 
 Return a JSON object with these fields:
-- thoroughness_score: int (1-10)
-- relevance_score: int (1-10)
-- efficiency_score: int (1-10)
-- sequence_score: int (1-10)
-- procedural_score: int (1-10) - based on their demonstrated knowledge of procedures
-- overall_exam_score: int (1-10)
-- strengths: array of strings
-- areas_for_improvement: array of strings
-- missed_key_exams: array of strings (important exams they should have done)
+- thoroughness_score: int (1-10) from rubric
+- relevance_score: int (1-10) from rubric
+- efficiency_score: int (1-10) from rubric
+- sequence_score: int (1-10) from rubric
+- procedural_score: int (1-10) - from rubric (based on verified procedures)
+- overall_exam_score: int (1-10) weighted average
+- strengths: array of strings (specific examination strengths)
+- areas_for_improvement: array of strings (specific areas needing improvement)
+- missed_key_exams: array of strings (important exams that were missed)
 - unnecessary_exams: array of strings (exams that weren't needed)
-- feedback: string with overall assessment and advice
+- feedback: string with overall assessment and specific advice
 """
 
             # Call LLM for evaluation
@@ -892,7 +1046,7 @@ Return a JSON object with these fields:
 class DiagnosisEvaluator:
     """
     Main evaluator that combines interaction, clinical decision, and physical exam evaluation
-    to provide comprehensive feedback.
+    to provide comprehensive feedback with clear numerical scoring.
     """
     def __init__(self, case: Dict[str, Any], config):
         self.case = case
@@ -901,8 +1055,6 @@ class DiagnosisEvaluator:
         self.clinical_evaluator = ClinicalDecisionEvaluator(config)
         self.physical_exam_evaluator = PhysicalExamEvaluator(config)
     
-    # Modified evaluate method for DiagnosisEvaluator class in evaluation.py
-
     def evaluate(self, 
             student_diagnosis: str,
             ordered_tests: Set[str],
@@ -911,7 +1063,7 @@ class DiagnosisEvaluator:
             physical_exams: List[Dict[str, Any]] = None,
             verified_procedures: List[Dict[str, Any]] = None,
             notes: Dict[str, str] = None,
-            timestamp_data: Dict[str, Any] = None  # New parameter
+            timestamp_data: Dict[str, Any] = None
         ) -> Dict[str, Any]:
         """
         Performs a comprehensive evaluation of the student's performance.
@@ -927,7 +1079,7 @@ class DiagnosisEvaluator:
             timestamp_data: Timestamp and workflow data for time-based evaluation
             
         Returns:
-            Dict containing comprehensive evaluation results
+            Dict containing comprehensive evaluation results with clear numerical scores
         """
         # Validate case data first
         if not self.case or not isinstance(self.case, dict):
@@ -935,7 +1087,15 @@ class DiagnosisEvaluator:
             return {
                 "correct": False,
                 "actual_diagnosis": "Unknown - Case data error",
-                "feedback": "Error: The case data is not properly initialized. Please start a new case."
+                "feedback": "Error: The case data is not properly initialized. Please start a new case.",
+                "scores": {
+                    "diagnosis_accuracy": 0,
+                    "communication": 0,
+                    "exam_thoroughness": 0,
+                    "clinical_reasoning": 0,
+                    "notes_completeness": 0,
+                    "workflow_efficiency": 0
+                }
             }
             
         # Ensure diagnosis exists in the case
@@ -1028,40 +1188,34 @@ class DiagnosisEvaluator:
             actual_diag_clean in student_diag_clean:
                 diagnosis_correct = True
         
-        # Combine evaluations
+        # Combine evaluations with a streamlined, UI-friendly structure
         combined_eval = {
             # Overall correctness from clinical evaluation
             "correct": diagnosis_correct,
             "actual_diagnosis": actual_diagnosis,
             
-            # Detailed scores
+            # Simplified scores structure optimized for UI display
             "scores": {
-                # Communication skills
+                # Main category scores for each rubric area
+                "diagnosis_accuracy": clinical_eval.get("diagnosis_accuracy_score", 0),
                 "communication": interaction_eval.get("communication_score", 0),
+                "exam_thoroughness": physical_eval.get("thoroughness_score", 0),
+                "clinical_reasoning": clinical_eval.get("clinical_reasoning_score", 0),
+                "notes_completeness": notes_eval.get("completeness_score", 0),
+                "workflow_efficiency": timestamp_eval.get("efficiency_score", 0),
+                
+                # Additional detailed scores (available but not shown in main table)
                 "empathy": interaction_eval.get("empathy_score", 0),
                 "interview_technique": interaction_eval.get("interview_technique_score", 0),
-                
-                # Physical examination
-                "exam_thoroughness": physical_eval.get("thoroughness_score", 0),
                 "exam_relevance": physical_eval.get("relevance_score", 0),
                 "exam_efficiency": physical_eval.get("efficiency_score", 0),
                 "procedural_skill": physical_eval.get("procedural_score", 0),
-                
-                # Clinical decision making
-                "diagnosis_accuracy": clinical_eval.get("diagnosis_accuracy_score", 0),
                 "test_selection": clinical_eval.get("test_selection_score", 0),
-                "clinical_reasoning": clinical_eval.get("clinical_reasoning_score", 0),
                 "resource_efficiency": clinical_eval.get("efficiency_score", 0),
-                
-                # Notes evaluation
-                "notes_completeness": notes_eval.get("completeness_score", 0),
                 "notes_organization": notes_eval.get("organization_score", 0),
                 "notes_accuracy": notes_eval.get("accuracy_score", 0),
                 "notes_terminology": notes_eval.get("terminology_score", 0),
                 "notes_assessment": notes_eval.get("assessment_plan_score", 0),
-                
-                # Timestamp evaluation 
-                "workflow_efficiency": timestamp_eval.get("efficiency_score", 0),
                 "test_prioritization": timestamp_eval.get("prioritization_score", 0),
                 "logical_progression": timestamp_eval.get("logical_progression_score", 0),
                 "guideline_adherence": timestamp_eval.get("guideline_adherence_score", 0),
@@ -1075,22 +1229,23 @@ class DiagnosisEvaluator:
             "overall_notes_score": notes_eval.get("overall_notes_score", 0),
             "overall_workflow_score": timestamp_eval.get("overall_workflow_score", 0),
             
-            # Specific feedback elements
-            "interaction_strengths": interaction_eval.get("strengths", []),
-            "interaction_improvements": interaction_eval.get("areas_for_improvement", []),
+            # Consolidated strengths from all evaluation areas
+            "strengths": (
+                interaction_eval.get("strengths", [])[:1] +
+                physical_eval.get("strengths", [])[:1] +
+                clinical_eval.get("strengths", [])[:1] +
+                notes_eval.get("strengths", [])[:1] +
+                timestamp_eval.get("strengths", [])[:1]
+            ),
             
-            "physical_exam_strengths": physical_eval.get("strengths", []),
+            # All specific improvement areas organized by category
+            "interaction_improvements": interaction_eval.get("areas_for_improvement", []),
             "physical_exam_improvements": physical_eval.get("areas_for_improvement", []),
             "missed_key_exams": physical_eval.get("missed_key_exams", []),
             "unnecessary_exams": physical_eval.get("unnecessary_exams", []),
-            
             "missed_critical_tests": clinical_eval.get("missed_critical_tests", []),
             "unnecessary_tests": clinical_eval.get("unnecessary_tests", []),
-            
-            "notes_strengths": notes_eval.get("strengths", []),
             "notes_improvements": notes_eval.get("areas_for_improvement", []),
-            
-            "workflow_strengths": timestamp_eval.get("strengths", []),
             "workflow_improvements": timestamp_eval.get("areas_for_improvement", []),
             
             # Add timeline data for visualization
@@ -1113,13 +1268,13 @@ class DiagnosisEvaluator:
         return combined_eval
     
     def _generate_combined_feedback(
-    self, 
-    interaction_eval: Dict[str, Any],
-    physical_eval: Dict[str, Any],
-    clinical_eval: Dict[str, Any],
-    notes_eval: Dict[str, Any],
-    timestamp_eval: Dict[str, Any]  # New parameter
-) -> str:
+        self, 
+        interaction_eval: Dict[str, Any],
+        physical_eval: Dict[str, Any],
+        clinical_eval: Dict[str, Any],
+        notes_eval: Dict[str, Any],
+        timestamp_eval: Dict[str, Any]
+    ) -> str:
         """
         Generates combined feedback from all evaluations.
         
@@ -1179,7 +1334,7 @@ class DiagnosisEvaluator:
         else:
             notes_feedback = "You did not create patient notes, which is an essential part of clinical practice. "
         
-        # Workflow timing assessment (new)
+        # Workflow timing assessment
         workflow_score = timestamp_eval.get("overall_workflow_score", 0)
         if workflow_score >= 8:
             workflow_feedback = "Your clinical workflow was highly efficient and well-prioritized. "
@@ -1237,7 +1392,7 @@ class DiagnosisEvaluator:
             for improvement in notes_improvements[:3]:  # Limit to top 3
                 combined += f"- {improvement}\n"
         
-        # Add workflow feedback (new)
+        # Add workflow feedback
         workflow_strengths = timestamp_eval.get("strengths", [])
         if workflow_strengths:
             combined += "\nStrengths in clinical workflow:\n"
