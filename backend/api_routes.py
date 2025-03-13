@@ -264,7 +264,7 @@ class APIRoutes:
                     
                     # Define path to save the generated image
                     image_filename = f"{imaging_name.replace(' ', '_').lower()}_{int(time.time())}.png"
-                    image_dir = os.path.join("static", "generated_images")
+                    image_dir = os.path.join(os.path.getcwd, 'static', 'generated_images')
                     os.makedirs(image_dir, exist_ok=True)
                     image_path = os.path.join(image_dir, image_filename)
                     

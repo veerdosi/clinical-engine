@@ -391,7 +391,6 @@ IMPRESSION:
             PIL Image object or None if the request failed
         """
         try:
-            # Replace with your remote server IP address
             api_url = "http://127.0.0.1:5001/generate"
             
             # Prepare the request
