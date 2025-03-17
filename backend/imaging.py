@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from openai import Client
-
+import sys
 import os
 import requests
 import io
@@ -381,43 +381,83 @@ IMPRESSION:
     
     def call_image_api(self, prompt: str, save_path: Optional[str] = None) -> Optional[Image.Image]:
         """
-        Call the remote text-to-image API with a prompt and return the generated image.
+        Call the Prompt2Imagegen/main.py script with a prompt and return the generated image.
         
         Args:
             prompt: The text prompt to generate an image from
             save_path: Optional path to save the image to
             
         Returns:
-            PIL Image object or None if the request failed
+            PIL Image object or None if the request failed, with cloudinary_url attribute if available
         """
         try:
-            api_url = "http://127.0.0.1:5001/generate"
+            # Define the path to the main.py script relative to the current file
+            script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                    "Prompt2MedImage", "main.py")
             
-            # Prepare the request
-            headers = {"Content-Type": "application/json"}
-            data = {"prompt": prompt}
-            
-            # Send the request
-            response = requests.post(api_url, json=data, headers=headers, timeout=60)
-            
-            # Check if the request was successful
-            if response.status_code == 200:
-                # Convert the response content to an image
-                image = Image.open(io.BytesIO(response.content))
-                
-                # Save the image if a path was provided
-                if save_path:
-                    # Ensure directory exists
-                    os.makedirs(os.path.dirname(save_path) if os.path.dirname(save_path) else '.', exist_ok=True)
-                    image.save(save_path)
-                    print(f"Image saved to {save_path}")
-                    
-                return image
-            else:
-                print(f"API request failed with status code {response.status_code}")
-                print(f"Response: {response.text}")
+            # Check if the script exists
+            if not os.path.exists(script_path):
+                logger.error(f"Could not find the main.py script at {script_path}")
                 return None
+            
+            # Prepare a temporary file to save the output image if save_path is not provided
+            if save_path is None:
+                temp_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "temp")
+                os.makedirs(temp_dir, exist_ok=True)
+                save_path = os.path.join(temp_dir, f"img_{datetime.now().strftime('%Y%m%d%H%M%S')}.png")
+            
+            # Ensure directory exists for save_path
+            os.makedirs(os.path.dirname(save_path) if os.path.dirname(save_path) else '.', exist_ok=True)
+            
+            # Execute the main.py script with the prompt and output path as arguments
+            import subprocess
+            import sys
+            
+            # Build the command with the prompt, output path, and upload flag
+            cmd = [
+                sys.executable, 
+                script_path, 
+                "--prompt", prompt, 
+                "--output", save_path,
+                "--upload"  # Add the upload flag to enable Cloudinary upload
+            ]
+            
+            logger.info(f"Executing command: {' '.join(cmd)}")
+            process = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            
+            if process.returncode != 0:
+                logger.error(f"Error executing main.py: {process.stderr}")
+                return None
+            
+            # Check for the Cloudinary URL in the output
+            cloudinary_url = None
+            for line in process.stdout.split('\n'):
+                if line.startswith("CLOUDINARY_URL:"):
+                    cloudinary_url = line.replace("CLOUDINARY_URL:", "").strip()
+                    logger.info(f"Image uploaded to Cloudinary: {cloudinary_url}")
+                    break
+            
+            logger.info(f"Image generated successfully and saved to {save_path}")
+            
+            # Open and return the image
+            if os.path.exists(save_path):
+                # Create a simple class to hold both the image and URL
+                class ImageWithURL(Image.Image):
+                    pass
                 
+                image = Image.open(save_path)
+                image_with_url = ImageWithURL()
+                image_with_url.cloudinary_url = cloudinary_url
+                
+                # Copy the image data
+                image_with_url = image.copy()
+                setattr(image_with_url, 'cloudinary_url', cloudinary_url)
+                
+                return image_with_url
+            else:
+                logger.error(f"Expected output file not found at {save_path}")
+                return None
+                    
         except Exception as e:
-            print(f"Error calling image API: {str(e)}")
+            logger.error(f"Error generating image: {str(e)}")
             return None

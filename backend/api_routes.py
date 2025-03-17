@@ -272,6 +272,7 @@ class APIRoutes:
                     # Generate and save the image
                     image_success = False
                     image_url = None
+                    cloudinary_url = None
                     
                     try:
                         # Call the image API and save the result
@@ -280,6 +281,11 @@ class APIRoutes:
                             image_success = True
                             # Create URL path for the image (relative to your static folder)
                             image_url = f"/static/generated_images/{image_filename}"
+                            
+                            # Check if the image has a cloudinary_url attribute
+                            if hasattr(image, 'cloudinary_url') and image.cloudinary_url:
+                                cloudinary_url = image.cloudinary_url
+                                logger.info(f"Cloudinary URL detected: {cloudinary_url}")
                     except Exception as img_err:
                         logger.error(f"Error generating image: {str(img_err)}")
                     
@@ -289,7 +295,7 @@ class APIRoutes:
                         "report": imaging_report,
                         "markdown": markdown_report,
                         "image_generated": image_success,
-                        "image_url": image_url,
+                        "image_url": cloudinary_url if cloudinary_url else image_url,
                         # "image_prompt": image_prompt  # Optional: include the prompt for debugging
                     })
                 else:
