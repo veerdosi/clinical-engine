@@ -17,7 +17,7 @@ const CaseSelectionScreen = ({ onCaseGenerated }) => {
     { value: "Pulmonology", label: "Pulmonology" },
     { value: "Orthopedic", label: "Orthopedic" }
   ];
-  
+
   const difficulties = [
     { value: "Random", label: "Feeling Lucky? (Random Difficulty)" },
     { value: "Easy", label: "Easy - common presentation with classic symptoms" },
@@ -33,13 +33,13 @@ const CaseSelectionScreen = ({ onCaseGenerated }) => {
 
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Only include non-random values in the request body
       const requestBody = {};
       if (specialty !== "random") requestBody.specialty = specialty;
       if (difficulty !== "random") requestBody.difficulty = difficulty;
-      
+
       const response = await fetch('/api/new-case', {
         method: 'POST',
         headers: {
@@ -47,11 +47,11 @@ const CaseSelectionScreen = ({ onCaseGenerated }) => {
         },
         body: JSON.stringify(requestBody),
       });
-      
+
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
-      
+
       const caseData = await response.json();
       onCaseGenerated(caseData);
     } catch (err) {
@@ -67,11 +67,11 @@ const CaseSelectionScreen = ({ onCaseGenerated }) => {
       <div className="selection-container">
         <h1>Clinical Engine</h1>
         <h2>Select Case Parameters</h2>
-        
+
         <div className="selection-form">
           <div className="form-group">
             <label>Medical Specialty:</label>
-            <select 
+            <select
               value={specialty}
               onChange={(e) => setSpecialty(e.target.value)}
               disabled={isLoading}
@@ -82,10 +82,10 @@ const CaseSelectionScreen = ({ onCaseGenerated }) => {
               ))}
             </select>
           </div>
-          
+
           <div className="form-group">
             <label>Difficulty Level:</label>
-            <select 
+            <select
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value)}
               disabled={isLoading}
@@ -96,14 +96,15 @@ const CaseSelectionScreen = ({ onCaseGenerated }) => {
               ))}
             </select>
           </div>
-          
+
           {error && <div className="error-message">{error}</div>}
-          
-          <button 
+
+          <button
             className="generate-btn"
             onClick={handleGenerateCase}
             disabled={isLoading}
           >
+            <span className={isLoading ? 'loading' : ''}></span>
             {isLoading ? 'Generating...' : 'Generate Case'}
           </button>
         </div>
