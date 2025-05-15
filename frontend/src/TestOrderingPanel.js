@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import InteractiveImageViewer from './InteractiveImageViewer';
 import './TestOrderingPanel.css';
 
 const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
@@ -107,15 +108,15 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
 
   const handleOrderTest = async () => {
     const testToOrder = selectedTest === 'custom' ? customTest : selectedTest;
-    
+
     if (!testToOrder) return;
 
     setIsOrdering(true);
     setError(null);
-    
+
     try {
       let endpoint, requestBody;
-      
+
       // Determine endpoint and request body based on tab
       if (selectedTab === 'lab') {
         endpoint = '/api/order-lab';
@@ -128,21 +129,21 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
         endpoint = '/api/order-imaging';
         requestBody = { imaging: testToOrder, type: 'procedure' };
       }
-      
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || 'Error ordering test');
       }
-      
+
       setTestResults(data);
-      
+
       // Reset after successful order
       if (selectedTest === 'custom') {
         setSelectedTest('');
@@ -196,7 +197,7 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
   // Don't render tab buttons if tab type is forced
   const renderTabButtons = !forceTabType && (
     <div className="tabs">
-      <button 
+      <button
         className={`tab-btn ${selectedTab === 'lab' ? 'active' : ''}`}
         onClick={() => {
           setSelectedTab('lab');
@@ -209,7 +210,7 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
       >
         Lab Tests
       </button>
-      <button 
+      <button
         className={`tab-btn ${selectedTab === 'imaging' ? 'active' : ''}`}
         onClick={() => {
           setSelectedTab('imaging');
@@ -232,16 +233,16 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
           <h3>Order Tests & Imaging</h3>
         </div>
       )}
-      
+
       {renderTabButtons}
-      
+
       <div className="test-selection">
         <label htmlFor="test-select">
           {labels.selectLabel}
         </label>
-        <select 
-          id="test-select" 
-          value={selectedTest} 
+        <select
+          id="test-select"
+          value={selectedTest}
           onChange={handleTestSelection}
           disabled={isDisabled || isOrdering}
         >
@@ -254,7 +255,7 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
             </option>
           ))}
         </select>
-        
+
         {showCustomInput && (
           <div className="custom-test-input">
             <input
@@ -270,8 +271,8 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
             )}
           </div>
         )}
-        
-        <button 
+
+        <button
           className="order-btn"
           onClick={handleOrderTest}
           disabled={isDisabled || isOrdering || (!selectedTest || (selectedTest === 'custom' && !customTest))}
@@ -279,13 +280,13 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
           {isOrdering ? 'Ordering...' : labels.buttonText}
         </button>
       </div>
-      
+
       {error && (
         <div className="error-message">
           <p>{error}</p>
         </div>
       )}
-      
+
       {testResults && (
         <div className="test-results">
           <h4>
@@ -310,12 +311,12 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
                 else if (line.includes('|')) {
                   // Skip table separators like |---|---|
                   if (line.match(/^\|[\s-:]+\|$/)) return null;
-                  
+
                   const cells = line.split('|').filter(cell => cell.trim() !== '');
                   return (
                     <div key={index} className="table-row">
                       {cells.map((cell, cellIndex) => (
-                        <div key={cellIndex} className="table-cell" 
+                        <div key={cellIndex} className="table-cell"
                             dangerouslySetInnerHTML={{ __html: cell.trim().replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                       ))}
                     </div>
@@ -323,8 +324,8 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
                 }
                 // Handle regular text with bold formatting
                 else if (line.trim() !== '') {
-                  return <p key={index} dangerouslySetInnerHTML={{ 
-                    __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+                  return <p key={index} dangerouslySetInnerHTML={{
+                    __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                   }} />;
                 }
                 // Handle empty lines
@@ -337,9 +338,11 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
           {testResults.image_url && (
             <div className="imaging-result-image">
               <h4>Imaging Result:</h4>
-              <img 
-                src={testResults.image_url} 
-                alt={`${testResults.message || 'Imaging result'}`} 
+              <InteractiveImageViewer
+                imageUrl={testResults.image_url}
+                imagingType={selectedTest === 'custom' ? customTest : selectedTest}
+                showReferenceImage={true}
+                showTools={true}
               />
             </div>
           )}
