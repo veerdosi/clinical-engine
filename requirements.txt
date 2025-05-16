@@ -8,3 +8,9 @@ aiohttp
 reportlab
 gunicorn
 cloudinary
+pymongo
+flask-pymongo
+flask-login
+google-auth
+google-auth-oauthlib
+PyJWT==2.8.0

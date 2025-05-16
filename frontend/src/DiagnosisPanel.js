@@ -12,7 +12,7 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
   const [loading, setLoading] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  
+
   // When diagnosis is submitted and we have a result, automatically show modal after a delay
   useEffect(() => {
     if (isSubmitted && result) {
@@ -39,12 +39,12 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
       document.body.style.top = '';
       document.body.style.width = '';
       document.body.style.overflow = '';
-      
+
       if (scrollY) {
         window.scrollTo(0, parseInt(scrollY || '0', 10) * -1);
       }
     }
-    
+
     // Clean up function
     return () => {
       document.body.style.position = '';
@@ -61,7 +61,7 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
         setShowModal(false);
       }
     };
-    
+
     window.addEventListener('keydown', handleEscKey);
     return () => {
       window.removeEventListener('keydown', handleEscKey);
@@ -87,9 +87,21 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
         }
       }
 
+      // Get authentication token directly
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.error("No auth token found in localStorage");
+        throw new Error("Authentication required. Please log in again.");
+      }
+
+      console.log("Submitting diagnosis with token:", token.substring(0, 10) + "...");
+
       const response = await fetch('/api/submit-diagnosis', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           diagnosis: diagnosis.trim(),
           case_id: case_info.id || 'current',
@@ -105,7 +117,7 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
       setResult(data);
       setIsSubmitted(true);
       setShowTimeline(true);
-      
+
       // Notify parent component that diagnosis has been submitted
       if (onDiagnosisSubmitted) {
         onDiagnosisSubmitted(data);
@@ -130,7 +142,7 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
     setShowModal(false);
     await onNewCase();
   };
-  
+
   const toggleTimeline = () => {
     setShowTimeline(!showTimeline);
   };
@@ -150,14 +162,14 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
           return "No evaluation possible";
       }
     }
-    
+
     if (score >= 9) return "Exceptional";
     if (score >= 8) return "Very Good";
     if (score >= 6) return "Adequate";
     if (score >= 4) return "Needs Improvement";
     return "Significantly Below Expectations";
   };
-  
+
   const calculateOverallScore = (scores) => {
     // Define weights for different categories
     const weights = {
@@ -168,10 +180,10 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
       notes_completeness: 0.10,
       workflow_efficiency: 0.15
     };
-    
+
     let weightedScore = 0;
     let totalWeight = 0;
-    
+
     // Calculate weighted sum
     for (const [category, weight] of Object.entries(weights)) {
       if (scores[category] !== undefined) {
@@ -179,16 +191,16 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
         totalWeight += weight;
       }
     }
-    
+
     // Return rounded weighted average
     return totalWeight > 0 ? Math.round(weightedScore / totalWeight) : 0;
   };
 
   const renderScoreTable = () => {
     if (!result || !result.scores) return null;
-    
+
     const scores = result.scores;
-    
+
     return (
       <div className="score-table-container">
         <h3>Clinical Performance Scores</h3>
@@ -241,14 +253,14 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
       </div>
     );
   };
-  
+
   const renderStrengthsAndAreas = () => {
     if (!result) return null;
-    
+
     return (
       <div className="evaluation-summary">
         <h3>Detailed Feedback</h3>
-        
+
         {result.strengths && result.strengths.length > 0 && (
           <div className="strengths-section">
             <h4>Strengths:</h4>
@@ -259,7 +271,7 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
             </ul>
           </div>
         )}
-        
+
         <div className="improvements-section">
           <h4>Areas Needing Improvement:</h4>
           <ul className="improvements-list">
@@ -268,25 +280,25 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
                 <strong>Patient Interaction:</strong> {result.interaction_improvements[0]}
               </li>
             )}
-            
+
             {result.missed_key_exams && result.missed_key_exams.length > 0 && (
               <li className="negative">
                 <strong>Physical Examination:</strong> Missed critical examinations ({result.missed_key_exams.join(', ')})
               </li>
             )}
-            
+
             {result.missed_critical_tests && result.missed_critical_tests.length > 0 && (
               <li className="negative">
                 <strong>Test Selection:</strong> Failed to order required tests ({result.missed_critical_tests.join(', ')})
               </li>
             )}
-            
+
             {result.notes_improvements && result.notes_improvements.length > 0 && (
               <li className="negative">
                 <strong>Documentation:</strong> {result.notes_improvements[0]}
               </li>
             )}
-            
+
             {result.workflow_improvements && result.workflow_improvements.length > 0 && (
               <li className="negative">
                 <strong>Clinical Workflow:</strong> {result.workflow_improvements[0]}
@@ -303,49 +315,49 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
     return ReactDOM.createPortal(
       <div className="diagnosis-modal-overlay">
         <div className="diagnosis-modal-content">
-          <button 
-            className="diagnosis-modal-close" 
+          <button
+            className="diagnosis-modal-close"
             onClick={toggleModal}
             aria-label="Close dialog"
           >
             &times;
           </button>
-          
+
           <div className="diagnosis-modal-header">
             <h3>{result.correct ? '✅ Correct Diagnosis!' : '❌ Incorrect Diagnosis'}</h3>
           </div>
-          
+
           <div className="diagnosis-modal-body">
             <div className="diagnosis-details">
               <p><strong>Your diagnosis:</strong> {diagnosis}</p>
               <p><strong>Correct diagnosis:</strong> {result.actual_diagnosis}</p>
             </div>
-            
+
             {renderScoreTable()}
             {renderStrengthsAndAreas()}
-            
+
             <div className="workflow-section">
-              <button 
-                className="toggle-timeline-btn" 
+              <button
+                className="toggle-timeline-btn"
                 onClick={toggleTimeline}
               >
                 {showTimeline ? 'Hide Timeline' : 'Show Clinical Workflow Timeline'}
               </button>
-              
+
               {showTimeline && result.timeline_data && (
-                <TimelineVisualization 
-                  timelineData={result.timeline_data} 
+                <TimelineVisualization
+                  timelineData={result.timeline_data}
                   efficiencyMetrics={result.efficiency_metrics}
                 />
               )}
             </div>
           </div>
-          
+
           <div className="diagnosis-modal-footer">
             <button className="new-case-btn" onClick={handleNewCase}>
               Start New Case
             </button>
-            
+
             {onReturnToSelection && (
               <button className="selection-btn" onClick={onReturnToSelection}>
                 Return to Case Selection
@@ -391,20 +403,20 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
         <div className={`diagnosis-result ${result.correct ? 'correct' : 'incorrect'}`}>
           <div className="diagnosis-header-controls">
             <h4>{result.correct ? '✅ Correct Diagnosis!' : '❌ Incorrect Diagnosis'}</h4>
-            <button 
-              className="expand-view-btn" 
+            <button
+              className="expand-view-btn"
               onClick={toggleModal}
               title="View full evaluation"
             >
               <span className="expand-icon">⛶</span>
             </button>
           </div>
-          
+
           <div className="diagnosis-details">
             <p><strong>Your diagnosis:</strong> {diagnosis}</p>
             <p><strong>Correct diagnosis:</strong> {result.actual_diagnosis}</p>
           </div>
-          
+
           <div className="button-group">
             <button className="new-case-btn" onClick={handleNewCase}>
               Start New Case
@@ -412,7 +424,7 @@ const DiagnosisPanel = ({ case_info, onNewCase, onDiagnosisSubmitted, onReturnTo
           </div>
         </div>
       )}
-      
+
       {/* Render modal when showModal is true */}
       {showModal && <FullscreenModal />}
     </div>

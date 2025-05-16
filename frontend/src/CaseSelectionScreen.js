@@ -40,10 +40,21 @@ const CaseSelectionScreen = ({ onCaseGenerated }) => {
       if (specialty !== "random") requestBody.specialty = specialty;
       if (difficulty !== "random") requestBody.difficulty = difficulty;
 
+      // Get authentication token directly
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        setError("Authentication required. Please log in again.");
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("Generating case with token:", token.substring(0, 10) + "...");
+
       const response = await fetch('/api/new-case', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(requestBody),
       });
