@@ -11,6 +11,7 @@ import NotesPanel from './NotesPanel';
 import InactivityReminder from './InactivityReminder';
 import LoginScreen from './LoginScreen';
 import AuthTester from './AuthTester';
+import StudentDashboard from './StudentDashboard';
 import { isAuthenticated, getCurrentUser, logout } from './auth';
 import './App.css';
 import './Auth.css';
@@ -22,6 +23,7 @@ function App() {
   const [isDiagnosisSubmitted, setIsDiagnosisSubmitted] = useState(false);
   const [isNewCase, setIsNewCase] = useState(false);
   const [showCaseSelection, setShowCaseSelection] = useState(true); // Start with case selection
+  const [showExplicitCaseSelection, setShowExplicitCaseSelection] = useState(false); // For showing case selection from dashboard
   const [activeTab, setActiveTab] = useState('patient'); // Default to patient tab
   const [notes, setNotes] = useState({}); // Add state for notes
   const [conversationHistory, setConversationHistory] = useState([]); // Add state for conversation history
@@ -52,6 +54,11 @@ function App() {
       setLoading(false); // No need to load case initially if we're showing selection screen
     }
   }, [showCaseSelection, authenticated]);
+
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log("State changed - showExplicitCaseSelection:", showExplicitCaseSelection);
+  }, [showExplicitCaseSelection]);
 
   const fetchCurrentCase = async () => {
     setLoading(true);
@@ -111,6 +118,7 @@ function App() {
 
       // Hide case selection screen when we have a case
       setShowCaseSelection(false);
+      setShowExplicitCaseSelection(false);
 
       // Reset to the patient tab
       setActiveTab('patient');
@@ -129,6 +137,7 @@ function App() {
     setCaseInfo(caseData);
     setIsNewCase(true);
     setShowCaseSelection(false);
+    setShowExplicitCaseSelection(false);
     setActiveTab('patient'); // Reset to the patient tab
     setNotes({}); // Reset notes
     setConversationHistory([]); // Reset conversation history
@@ -145,6 +154,7 @@ function App() {
 
   const handleReturnToSelection = () => {
     setShowCaseSelection(true);
+    setShowExplicitCaseSelection(false);
     setIsDiagnosisSubmitted(false);
     setIsNewCase(false);
     setNotes({});
@@ -219,9 +229,44 @@ function App() {
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // Show case selection screen if the flag is true
+  // IMPORTANT: Check for explicit case selection first
+  // Handle showing case selection screen when requested from dashboard
+  if (showExplicitCaseSelection) {
+    console.log("App: showExplicitCaseSelection is true, showing CaseSelectionScreen with back button");
+    return (
+      <CaseSelectionScreen
+        onCaseGenerated={handleCaseGenerated}
+        onBackToDashboard={() => setShowExplicitCaseSelection(false)}
+      />
+    );
+  }
+
+  // Then handle the regular dashboard view
   if (showCaseSelection) {
-    return <CaseSelectionScreen onCaseGenerated={handleCaseGenerated} />;
+    // If it's explicitly marked as showing case selection, render it
+    if (window.location.search.includes('skip-dashboard=true')) {
+      return <CaseSelectionScreen onCaseGenerated={handleCaseGenerated} />;
+    }
+
+    // Otherwise, show the student dashboard as the main landing screen
+    return (
+      <StudentDashboard
+        user={user}
+        onStartNewCase={() => {
+          // Show case selection screen but keep showCaseSelection as true
+          // so we can return to dashboard afterward
+          console.log("App: onStartNewCase called, setting showExplicitCaseSelection=true");
+          setShowExplicitCaseSelection(true);
+        }}
+        onResumeCaseClick={(caseId) => {
+          // Handle resuming a specific case
+          // In a real implementation, this would load the specified case
+          console.log("Resuming case:", caseId);
+          fetchCurrentCase();
+          setShowCaseSelection(false);
+        }}
+      />
+    );
   }
 
   if (loading && !caseInfo) {

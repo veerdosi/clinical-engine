@@ -272,6 +272,22 @@ export const getUserSessions = async (page = 1, perPage = 10) => {
   }
 };
 
+// Get user dashboard data (combines evaluations, sessions, and other stats)
+export const getDashboardData = async () => {
+  try {
+    const response = await authFetch('/api/dashboard');
+
+    if (!response.ok) {
+      throw new Error(`Failed to get dashboard data: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error getting dashboard data:", error);
+    throw error;
+  }
+};
+
 // Test authentication
 export const testAuth = async () => {
   try {

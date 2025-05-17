@@ -176,6 +176,35 @@
   box-shadow: none;
 }
 
+.back-btn {
+  padding: 0.8rem 1.5rem;
+  background: white;
+  color: var(--primary-600);
+  border: 1px solid var(--primary-300);
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  margin-top: 1rem;
+  margin-left: 1rem;
+}
+
+.back-btn:hover:not(:disabled) {
+  background-color: var(--primary-50);
+  border-color: var(--primary-400);
+  color: var(--primary-700);
+}
+
+.back-btn:active:not(:disabled) {
+  background-color: var(--primary-100);
+}
+
+.back-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Loading animation */
 .generate-btn:disabled:has(.loading) {
   padding-left: 2.5rem;

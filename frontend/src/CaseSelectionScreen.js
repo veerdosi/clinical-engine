@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import './CaseSelectionScreen.css';
 
-const CaseSelectionScreen = ({ onCaseGenerated }) => {
+const CaseSelectionScreen = ({ onCaseGenerated, onBackToDashboard }) => {
   const [specialty, setSpecialty] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -118,6 +118,16 @@ const CaseSelectionScreen = ({ onCaseGenerated }) => {
             <span className={isLoading ? 'loading' : ''}></span>
             {isLoading ? 'Generating...' : 'Generate Case'}
           </button>
+
+          {onBackToDashboard && (
+            <button
+              className="back-btn"
+              onClick={onBackToDashboard}
+              disabled={isLoading}
+            >
+              Back to Dashboard
+            </button>
+          )}
         </div>
       </div>
     </div>
