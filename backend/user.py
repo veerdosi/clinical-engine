@@ -11,13 +11,12 @@ class User:
     """User model for authentication and user management"""
 
     def __init__(self, email=None, name=None, picture=None, google_id=None,
-                 user_id=None, role="student", created_at=None, last_login=None):
+                 user_id=None, created_at=None, last_login=None):
         self.email = email
         self.name = name
         self.picture = picture  # Profile picture URL
         self.google_id = google_id
         self.user_id = user_id  # MongoDB _id
-        self.role = role  # "student", "instructor", "admin"
         self.created_at = created_at or datetime.datetime.utcnow()
         self.last_login = last_login
 
@@ -37,7 +36,6 @@ class User:
             picture=user_data.get('picture'),
             google_id=user_data.get('google_id'),
             user_id=str(user_data.get('_id')),
-            role=user_data.get('role', 'student'),
             created_at=user_data.get('created_at'),
             last_login=user_data.get('last_login')
         )
@@ -60,7 +58,6 @@ class User:
                 picture=user_data.get('picture'),
                 google_id=user_data.get('google_id'),
                 user_id=str(user_data.get('_id')),
-                role=user_data.get('role', 'student'),
                 created_at=user_data.get('created_at'),
                 last_login=user_data.get('last_login')
             )
@@ -102,7 +99,6 @@ class User:
                 "name": google_data.get('name'),
                 "picture": google_data.get('picture'),
                 "google_id": google_data.get('sub'),
-                "role": "student",  # Default role
                 "created_at": datetime.datetime.utcnow(),
                 "last_login": datetime.datetime.utcnow()
             }
@@ -116,7 +112,6 @@ class User:
                 picture=new_user.get('picture'),
                 google_id=new_user.get('google_id'),
                 user_id=new_user.get('user_id'),
-                role=new_user.get('role'),
                 created_at=new_user.get('created_at'),
                 last_login=new_user.get('last_login')
             )
@@ -129,7 +124,6 @@ class User:
             payload = {
                 'user_id': self.user_id,
                 'email': self.email,
-                'role': self.role,
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=expiration)
             }
 
@@ -197,7 +191,6 @@ class User:
             'email': self.email,
             'name': self.name,
             'picture': self.picture,
-            'role': self.role,
             'created_at': self.created_at,
             'last_login': self.last_login
         }

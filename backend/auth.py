@@ -113,22 +113,3 @@ def login_required(f):
     return decorated_function
 
 
-# Decorator for routes requiring specific roles
-def role_required(roles):
-    def decorator(f):
-        @functools.wraps(f)
-        @login_required  # First ensure the user is logged in
-        def decorated_function(*args, **kwargs):
-            # Get the authenticated user from g
-            user = g.user
-
-            # Check if user has required role
-            if user.role not in roles:
-                return jsonify({"error": "Insufficient permissions"}), 403
-
-            # Call the original function
-            return f(*args, **kwargs)
-
-        return decorated_function
-
-    return decorator

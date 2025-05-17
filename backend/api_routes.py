@@ -6,7 +6,7 @@ import requests
 import io
 import os
 import time
-from .auth import AuthService, login_required, role_required
+from .auth import AuthService, login_required
 from .user import User
 
 logger = logging.getLogger(__name__)
