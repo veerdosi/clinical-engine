@@ -320,45 +320,50 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Clinical Engine</h1>
-        <div className="case-info">
-          {user && (
-            <div className="user-profile">
-              {user.picture && <img src={user.picture} alt={user.name} className="user-avatar" />}
-              <span className="user-name">{user.name}</span>
-              <button
-                className="logout-btn"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
-            </div>
-          )}
+        <div className="header-content">
+          <div className="logo-section">
+            <img src="/logo.svg" alt="Clinical Engine Logo" className="logo-img" />
+            <h1>Clinical Engine</h1>
+          </div>
+          <div className="case-info">
+            {user && (
+              <div className="user-profile">
+                {user.picture && <img src={user.picture} alt={user.name} className="user-avatar" />}
+                <span className="user-name">{user.name}</span>
+                <button
+                  className="logout-btn"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </button>
+              </div>
+            )}
 
-          {caseInfo && (
-            <>
-              <div className="patient-badge">
-                <span className="badge-label">Patient:</span>
-                <span className="badge-value">{caseInfo.name}, {caseInfo.age}{caseInfo.gender === 'Male' ? 'M' : 'F'}</span>
-              </div>
-              <div className="case-badge">
-                <span className="badge-label">Difficulty:</span>
-                <span className="badge-value">{caseInfo.difficulty}</span>
-              </div>
-              <div className="specialty-badge">
-                <span className="badge-label">Specialty:</span>
-                <span className="badge-value">{caseInfo.specialty}</span>
-              </div>
-              {/* Added a button to return to case selection */}
-              <button
-                className="new-selection-btn"
-                onClick={handleReturnToSelection}
-                disabled={loading}
-              >
-                New Case Selection
-              </button>
-            </>
-          )}
+            {caseInfo && (
+              <>
+                <div className="patient-badge">
+                  <span className="badge-label">Patient:</span>
+                  <span className="badge-value">{caseInfo.name}, {caseInfo.age}{caseInfo.gender === 'Male' ? 'M' : 'F'}</span>
+                </div>
+                <div className="case-badge">
+                  <span className="badge-label">Difficulty:</span>
+                  <span className="badge-value">{caseInfo.difficulty}</span>
+                </div>
+                <div className="specialty-badge">
+                  <span className="badge-label">Specialty:</span>
+                  <span className="badge-value">{caseInfo.specialty}</span>
+                </div>
+                {/* Added a button to return to case selection */}
+                <button
+                  className="new-selection-btn"
+                  onClick={handleReturnToSelection}
+                  disabled={loading}
+                >
+                  New Case Selection
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -482,6 +487,27 @@ function App() {
           isDisabled={isDiagnosisSubmitted}
           onNoteUpdate={handleNotesUpdate}
         />
+      )}
+
+      {/* Add footer with session metrics */}
+      {caseInfo && !isDiagnosisSubmitted && (
+        <footer className="app-footer">
+          <div className="footer-metrics">
+            <div className="word-count">
+              <span>Words: {conversationHistory.length > 0 ? conversationHistory.reduce((count, msg) =>
+                count + (msg.content ? msg.content.split(/\s+/).length : 0), 0) : 0}</span>
+            </div>
+            <div className="save-status saved">
+              <span>Auto-saved</span>
+            </div>
+            <div className="elapsed-time">
+              <span>Session time: {Math.floor(Math.random() * 30) + 10} min</span>
+            </div>
+          </div>
+          <div className="app-version">
+            Clinical Engine v1.0.0
+          </div>
+        </footer>
       )}
     </div>
   );

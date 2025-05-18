@@ -1,20 +1,32 @@
 /* Base styles and typography */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Fira+Code:wght@400;500&display=swap');
 
 :root {
-  /* Color palette */
-  --primary-50: #eef6ff;
-  --primary-100: #d9eaff;
-  --primary-200: #bbd7ff;
-  --primary-300: #8cbcff;
-  --primary-400: #5897ff;
-  --primary-500: #3b82f6;
-  --primary-600: #2563eb;
-  --primary-700: #1d4ed8;
-  --primary-800: #1e40af;
-  --primary-900: #1e3a8a;
+  /* Main Color Palette - Updated with deep indigo and teal per design guidelines */
+  --primary-50: #eef3ff;
+  --primary-100: #e0e9ff;
+  --primary-200: #c7d7fe;
+  --primary-300: #a5bcf5;
+  --primary-400: #7d99ea;
+  --primary-500: #5876de;
+  --primary-600: #3a50c5; /* Main deep indigo */
+  --primary-700: #2a3b8f;
+  --primary-800: #24307d;
+  --primary-900: #1e2a6a;
 
-  /* Neutrals */
+  /* Accent teal color */
+  --accent-50: #e6fcfa;
+  --accent-100: #c8f9f6;
+  --accent-200: #98f2ef;
+  --accent-300: #5ce7e6;
+  --accent-400: #36d9d9;
+  --accent-500: #20b9ba; /* Main teal */
+  --accent-600: #1a9293;
+  --accent-700: #1b737a;
+  --accent-800: #1a5c65;
+  --accent-900: #1a4c56;
+
+  /* Neutrals - Keeping the same scale */
   --neutral-50: #f9fafb;
   --neutral-100: #f3f4f6;
   --neutral-200: #e5e7eb;
@@ -26,20 +38,22 @@
   --neutral-800: #1f2937;
   --neutral-900: #111827;
 
-  /* Success and error colors */
+  /* Success colors */
   --success-50: #ecfdf5;
   --success-500: #10b981;
   --success-700: #047857;
 
+  /* Error colors */
   --error-50: #fef2f2;
   --error-500: #ef4444;
   --error-700: #b91c1c;
 
-  /* Warning and info colors */
+  /* Warning colors - changed to amber per design guidelines */
   --warning-50: #fffbeb;
-  --warning-500: #f59e0b;
+  --warning-500: #f59e0b; /* Amber */
   --warning-700: #b45309;
 
+  /* Info colors */
   --info-50: #eff6ff;
   --info-500: #3b82f6;
   --info-700: #1d4ed8;
@@ -50,9 +64,10 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 
-  /* Gradients */
-  --gradient-blue: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
-  --gradient-blue-light: linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%);
+  /* Gradients - Updated with new color palette */
+  --gradient-primary: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
+  --gradient-primary-light: linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%);
+  --gradient-accent: linear-gradient(135deg, var(--accent-500) 0%, var(--accent-700) 100%);
   --gradient-dark: linear-gradient(135deg, var(--neutral-800) 0%, var(--neutral-900) 100%);
 
   /* Border radius */
@@ -61,6 +76,20 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-full: 9999px;
+
+  /* Spacing - Using 4px as base unit per design guidelines */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -82,7 +111,7 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -94,7 +123,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   line-height: 1.2;
   color: var(--neutral-900);
@@ -142,6 +171,19 @@ a:hover {
   color: var(--primary-800);
 }
 
+/* Diagnostic data - monospace font per design guidelines */
+.diagnostic-data,
+.lab-results,
+.code-display {
+  font-family: 'Fira Code', monospace;
+  background-color: var(--neutral-100);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  letter-spacing: -0.025em;
+  overflow-x: auto;
+}
+
 /* Accessibility outline styles */
 :focus {
   outline: 2px solid var(--primary-400);
@@ -157,12 +199,40 @@ a:hover {
   outline-offset: 2px;
 }
 
-/* Button base styles */
+/* Button base styles - updated for rounded modern look */
 button {
   font-family: 'Inter', sans-serif;
   font-weight: 500;
   cursor: pointer;
+  border-radius: var(--radius-md);
   transition: all var(--transition-normal);
+}
+
+/* Primary button - filled indigo */
+.btn-primary {
+  background-color: var(--primary-600);
+  color: white;
+  border: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--primary-700);
+}
+
+/* Secondary button - outlined teal */
+.btn-secondary {
+  background-color: transparent;
+  color: var(--accent-600);
+  border: 1px solid var(--accent-500);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--accent-50);
+  color: var(--accent-700);
 }
 
 button:disabled {
@@ -172,12 +242,25 @@ button:disabled {
 
 /* Form element base styles */
 input, select, textarea {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Roboto', sans-serif;
   font-size: 1rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  background-color: white;
+  transition: all var(--transition-normal);
 }
 
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(58, 80, 197, 0.2);
+  outline: none;
+}
+
+/* Code display for monospaced content */
 code {
-  font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+  font-family: 'Fira Code', 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+  font-size: 0.9em;
 }
 
 /* Scrollbar styling */
@@ -207,20 +290,67 @@ code {
   white-space: nowrap;
 }
 
+/* Grid system - 12 column grid with 4px spacing unit */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
 /* Container styles */
 .container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 var(--space-4);
 }
 
+/* Responsive adjustments */
 @media (max-width: 768px) {
   html {
     font-size: 14px;
   }
 
-  .container {
-    padding: 0 0.75rem;
+  .container, .grid-container {
+    padding: 0 var(--space-3);
+  }
+
+  .grid-container {
+    gap: var(--space-3);
   }
 }
+
+/* Color utilities */
+.text-primary { color: var(--primary-600); }
+.text-accent { color: var(--accent-500); }
+.text-success { color: var(--success-500); }
+.text-warning { color: var(--warning-500); }
+.text-error { color: var(--error-500); }
+.text-neutral { color: var(--neutral-700); }
+
+.bg-primary { background-color: var(--primary-600); }
+.bg-accent { background-color: var(--accent-500); }
+.bg-success { background-color: var(--success-500); }
+.bg-warning { background-color: var(--warning-500); }
+.bg-error { background-color: var(--error-500); }
+.bg-neutral { background-color: var(--neutral-100); }
+
+/* Spacing utilities */
+.mt-1 { margin-top: var(--space-1); }
+.mt-2 { margin-top: var(--space-2); }
+.mt-4 { margin-top: var(--space-4); }
+.mb-1 { margin-bottom: var(--space-1); }
+.mb-2 { margin-bottom: var(--space-2); }
+.mb-4 { margin-bottom: var(--space-4); }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.my-2 { margin-top: var(--space-2); margin-bottom: var(--space-2); }
+
+.p-1 { padding: var(--space-1); }
+.p-2 { padding: var(--space-2); }
+.p-4 { padding: var(--space-4); }
+.px-2 { padding-left: var(--space-2); padding-right: var(--space-2); }
+.py-2 { padding-top: var(--space-2); padding-bottom: var(--space-2); }
