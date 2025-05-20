@@ -1,8 +1,28 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { getUserEvaluations, getUserSessions, getDashboardData } from './api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar, Clock, ArrowUpRight, ChevronRight, User, Book, FileText, Activity, HelpCircle, LogOut, ChevronDown } from 'lucide-react';
 import './StudentDashboard.css';
+
+// Portal-based dropdown for the avatar
+const AvatarDropdown = ({ anchorRef, isOpen, onClose, children }) => {
+  if (!isOpen || !anchorRef?.current) return null;
+  const rect = anchorRef.current.getBoundingClientRect();
+  const style = {
+    position: 'absolute',
+    top: rect.bottom + window.scrollY + 4,
+    left: rect.left + window.scrollX,
+    width: 192,
+    zIndex: 1000,
+  };
+  return createPortal(
+    <div style={style} className="bg-white rounded-md shadow-lg border border-gray-200 py-1">
+      {children}
+    </div>,
+    document.body
+  );
+};
 
 const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
   const [loading, setLoading] = useState(true);
@@ -335,7 +355,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
             <h1 className="text-2xl font-bold text-gray-900">Clinical Engine</h1>
           </div>
 
-          <div className="relative">
+          <div className="relative inline-block" ref={dropdownRef}>
             <div
               onClick={toggleDropdown}
               className={`flex items-center space-x-2 cursor-pointer p-2 rounded-md ${isDropdownOpen ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
@@ -344,35 +364,29 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
               <span className="text-gray-800 font-medium">{user?.name || 'Dr. Jane Smith'}</span>
               <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'transform rotate-180 text-blue-500' : 'text-gray-500'}`} />
             </div>
-
-            {isDropdownOpen && (
-              <div
-                ref={dropdownRef}
-                className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl py-1 z-50 border border-gray-200 transform origin-top-right transition-all duration-200 ease-out scale-100 opacity-100"
+            <AvatarDropdown anchorRef={dropdownRef} isOpen={isDropdownOpen} onClose={() => setIsDropdownOpen(false)}>
+              <button
+                onClick={() => {/* TODO */}}
+                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
               >
-                <button
-                  onClick={() => {/* TODO */}}
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
-                >
-                  <HelpCircle className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
-                  Help Center
-                </button>
-                <button
-                  onClick={() => {/* TODO */}}
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
-                >
-                  <Book className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
-                  Profile
-                </button>
-                <button
-                  onClick={() => {/* TODO */}}
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
-                >
-                  <LogOut className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
-                  Logout
-                </button>
-              </div>
-            )}
+                <HelpCircle className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
+                Help Center
+              </button>
+              <button
+                onClick={() => {/* TODO */}}
+                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
+              >
+                <Book className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
+                Profile
+              </button>
+              <button
+                onClick={() => {/* TODO */}}
+                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
+              >
+                <LogOut className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
+                Logout
+              </button>
+            </AvatarDropdown>
           </div>
         </div>
       </header>
