@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { getUserEvaluations, getUserSessions, getDashboardData } from './api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Calendar, Clock, ArrowUpRight, ChevronRight, User, Book, FileText, Activity } from 'lucide-react';
+import { Calendar, Clock, ArrowUpRight, ChevronRight, User, Book, FileText, Activity, HelpCircle, LogOut, ChevronDown } from 'lucide-react';
 import './StudentDashboard.css';
 
 const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [stats, setStats] = useState({
     totalCases: 0,
     completedCases: 0,
@@ -17,6 +18,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
   const [learningResources, setLearningResources] = useState([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [performanceData, setPerformanceData] = useState([]);
+  const dropdownRef = React.useRef(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -68,6 +70,20 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
 
     // Generate sample performance data until real data is available
     generateSamplePerformanceData();
+  }, []);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const generateSamplePerformanceData = () => {
@@ -275,6 +291,10 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     }
   };
 
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -315,14 +335,44 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
             <h1 className="text-2xl font-bold text-gray-900">Clinical Engine</h1>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition-colors">
-              Help Center
-            </button>
-            <div className="flex items-center">
-              <img src={user?.picture || '/api/placeholder/32/32'} alt="User avatar" className="w-8 h-8 rounded-full mr-2" />
+          <div className="relative">
+            <div
+              onClick={toggleDropdown}
+              className={`flex items-center space-x-2 cursor-pointer p-2 rounded-md ${isDropdownOpen ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+            >
+              <img src={user?.picture || '/api/placeholder/32/32'} alt="User avatar" className="w-8 h-8 rounded-full" />
               <span className="text-gray-800 font-medium">{user?.name || 'Dr. Jane Smith'}</span>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'transform rotate-180 text-blue-500' : 'text-gray-500'}`} />
             </div>
+
+            {isDropdownOpen && (
+              <div
+                ref={dropdownRef}
+                className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl py-1 z-50 border border-gray-200 transform origin-top-right transition-all duration-200 ease-out scale-100 opacity-100"
+              >
+                <button
+                  onClick={() => {/* TODO */}}
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
+                >
+                  <HelpCircle className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
+                  Help Center
+                </button>
+                <button
+                  onClick={() => {/* TODO */}}
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
+                >
+                  <Book className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
+                  Profile
+                </button>
+                <button
+                  onClick={() => {/* TODO */}}
+                  className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
+                >
+                  <LogOut className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
