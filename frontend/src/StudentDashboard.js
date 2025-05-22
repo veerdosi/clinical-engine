@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import { getUserEvaluations, getUserSessions, getDashboardData } from './api';
-import { logout, getCurrentUser } from './auth';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar, Clock, ArrowUpRight, ChevronRight, User, Book, FileText, Activity, HelpCircle, LogOut, ChevronDown } from 'lucide-react';
 import './StudentDashboard.css';
@@ -26,9 +24,7 @@ const AvatarDropdown = ({ anchorRef, isOpen, onClose, children }) => {
   );
 };
 
-const StudentDashboard = ({ onStartNewCase, onResumeCaseClick }) => {
-  const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -45,10 +41,6 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick }) => {
   const dropdownRef = React.useRef(null);
 
   useEffect(() => {
-    // Get current user
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
@@ -323,16 +315,6 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick }) => {
     setIsDropdownOpen(!isDropdownOpen);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  const handleProfileClick = () => {
-    setIsDropdownOpen(false);
-    navigate('/profile');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -391,14 +373,14 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick }) => {
                 Help Center
               </button>
               <button
-                onClick={handleProfileClick}
+                onClick={() => {/* TODO */}}
                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
               >
                 <Book className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
                 Profile
               </button>
               <button
-                onClick={handleLogout}
+                onClick={() => {/* TODO */}}
                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
               >
                 <LogOut className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
