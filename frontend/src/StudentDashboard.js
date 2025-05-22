@@ -34,6 +34,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     accuracyRate: 0
   });
   const [recentCases, setRecentCases] = useState([]);
+  const [specialtyPerformance, setSpecialtyPerformance] = useState([]);
   const [learningResources, setLearningResources] = useState([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [performanceData, setPerformanceData] = useState([]);
