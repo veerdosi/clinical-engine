@@ -1,8 +1,8 @@
-// Base API URL configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
-
 // api.js
 import { getToken, authFetch } from './auth';
+
+// Base API URL configuration
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 // Helper function to create authenticated request headers
 const getAuthHeaders = (contentType = 'application/json') => {
