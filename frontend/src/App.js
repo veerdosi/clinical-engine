@@ -1,5 +1,3 @@
-// Complete App.js with tabbed navigation, VitalSigns, NotesPanel integration,
-// and conversation history persistence
 import React, { useState, useEffect } from 'react';
 import ChatWindow from './ChatWindow';
 import DiagnosisPanel from './DiagnosisPanel';
@@ -12,6 +10,8 @@ import InactivityReminder from './InactivityReminder';
 import LoginScreen from './LoginScreen';
 import AuthTester from './AuthTester';
 import StudentDashboard from './StudentDashboard';
+import LandingPage from './LandingPage.tsx';
+import ProfilePage from './ProfilePage';
 import { isAuthenticated, getCurrentUser, logout } from './auth';
 import './App.css';
 import './Auth.css';
@@ -489,27 +489,68 @@ function App() {
         />
       )}
 
-      {/* Add footer with session metrics */}
-      {caseInfo && !isDiagnosisSubmitted && (
-        <footer className="app-footer">
-          <div className="footer-metrics">
-            <div className="word-count">
-              <span>Words: {conversationHistory.length > 0 ? conversationHistory.reduce((count, msg) =>
-                count + (msg.content ? msg.content.split(/\s+/).length : 0), 0) : 0}</span>
+        {caseInfo && !isDiagnosisSubmitted && (
+          <footer className="app-footer">
+            <div className="footer-metrics">
+              <div className="word-count">
+                <span>Words: {conversationHistory.length > 0 ? conversationHistory.reduce((count, msg) =>
+                  count + (msg.content ? msg.content.split(/\s+/).length : 0), 0) : 0}</span>
+              </div>
+              <div className="save-status saved">
+                <span>Auto-saved</span>
+              </div>
+              <div className="elapsed-time">
+                <span>Session time: {Math.floor(Math.random() * 30) + 10} min</span>
+              </div>
             </div>
-            <div className="save-status saved">
-              <span>Auto-saved</span>
+            <div className="app-version">
+              Clinical Engine v1.0.0
             </div>
-            <div className="elapsed-time">
-              <span>Session time: {Math.floor(Math.random() * 30) + 10} min</span>
-            </div>
-          </div>
-          <div className="app-version">
-            Clinical Engine v1.0.0
-          </div>
-        </footer>
-      )}
-    </div>
+          </footer>
+        )}
+      </div>
+    );
+  }
+
+  // Return nothing for other cases - routing handles them
+  return null;
+}
+
+// Main App component with routing
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginScreen onLoginSuccess={(userData) => {
+        console.log("Login successful, redirecting to dashboard");
+        return <Navigate to="/dashboard" replace />;
+      }} />} />
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <StudentDashboard
+            onStartNewCase={() => <Navigate to="/case-selection" replace />}
+            onResumeCaseClick={(caseId) => <Navigate to="/simulation" replace />}
+          />
+        </ProtectedRoute>
+      } />
+      <Route path="/case-selection" element={
+        <ProtectedRoute>
+          <CaseSelectionScreen />
+        </ProtectedRoute>
+      } />
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <ProfilePage />
+        </ProtectedRoute>
+      } />
+      <Route path="/simulation/*" element={
+        <ProtectedRoute>
+          <ClinicalEngineApp />
+        </ProtectedRoute>
+      } />
+      <Route path="/auth-test" element={<AuthTester />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
