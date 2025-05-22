@@ -2,6 +2,9 @@
  * Authentication service to manage tokens and user state
  */
 
+// Base API URL configuration
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
 // Check if user is already authenticated
 export const isAuthenticated = () => {
   const token = localStorage.getItem('authToken');
@@ -67,7 +70,7 @@ export const validateToken = async () => {
 
   try {
     const token = getToken();
-    const response = await fetch('/api/auth/validate', {
+    const response = await fetch(`${API_BASE_URL}/api/auth/validate`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -127,7 +130,8 @@ export const authFetch = async (url, options = {}) => {
 
   try {
     console.log(`Making authenticated request to ${url}`);
-    const response = await fetch(url, {
+    const finalUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+    const response = await fetch(finalUrl, {
       ...options,
       headers
     });

@@ -1,3 +1,6 @@
+// Base API URL configuration
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
 // api.js
 import { getToken, authFetch } from './auth';
 
@@ -17,7 +20,7 @@ const getAuthHeaders = (contentType = 'application/json') => {
 
 export const sendMessage = async (message, includeVoiceResponse = true) => {
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
@@ -43,7 +46,7 @@ export const sendMessage = async (message, includeVoiceResponse = true) => {
 // Get current case
 export const getCurrentCase = async () => {
   try {
-    const response = await fetch('/api/current-case', {
+    const response = await fetch(`${API_BASE_URL}/api/current-case`, {
       headers: getAuthHeaders()
     });
 
@@ -73,7 +76,7 @@ export const generateNewCase = async (specialty, difficulty) => {
     console.log("Using token:", token.substring(0, 10) + "...");
 
     // This route is protected and requires authentication
-    const response = await fetch('/api/new-case', {
+    const response = await fetch(`${API_BASE_URL}/api/new-case`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -103,7 +106,7 @@ export const generateNewCase = async (specialty, difficulty) => {
 // Save notes
 export const saveNotes = async (notes, case_id) => {
   try {
-    const response = await authFetch('/api/save-notes', {
+    const response = await authFetch(`${API_BASE_URL}/api/save-notes`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -128,7 +131,7 @@ export const saveNotes = async (notes, case_id) => {
 // Submit diagnosis
 export const submitDiagnosis = async (diagnosis, notes, case_id) => {
   try {
-    const response = await authFetch('/api/submit-diagnosis', {
+    const response = await authFetch(`${API_BASE_URL}/api/submit-diagnosis`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -154,7 +157,7 @@ export const submitDiagnosis = async (diagnosis, notes, case_id) => {
 // Order lab test
 export const orderLabTest = async (test) => {
   try {
-    const response = await authFetch('/api/order-lab', {
+    const response = await authFetch(`${API_BASE_URL}/api/order-lab`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -178,7 +181,7 @@ export const orderLabTest = async (test) => {
 // Order imaging
 export const orderImaging = async (imaging) => {
   try {
-    const response = await authFetch('/api/order-imaging', {
+    const response = await authFetch(`${API_BASE_URL}/api/order-imaging`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -202,7 +205,7 @@ export const orderImaging = async (imaging) => {
 // Perform physical exam
 export const performPhysicalExam = async (system, procedure_verified = false) => {
   try {
-    const response = await authFetch('/api/physical-exam', {
+    const response = await authFetch(`${API_BASE_URL}/api/physical-exam`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -227,7 +230,7 @@ export const performPhysicalExam = async (system, procedure_verified = false) =>
 // Get user evaluation history
 export const getUserEvaluations = async (page = 1, perPage = 10) => {
   try {
-    const response = await authFetch(`/api/evaluations/history?page=${page}&per_page=${perPage}`);
+    const response = await authFetch(`${API_BASE_URL}/api/evaluations/history?page=${page}&per_page=${perPage}`);
 
     if (!response.ok) {
       throw new Error(`Failed to get evaluation history: ${response.statusText}`);
@@ -243,7 +246,7 @@ export const getUserEvaluations = async (page = 1, perPage = 10) => {
 // Get evaluation details
 export const getEvaluationDetails = async (evaluationId) => {
   try {
-    const response = await authFetch(`/api/evaluations/${evaluationId}`);
+    const response = await authFetch(`${API_BASE_URL}/api/evaluations/${evaluationId}`);
 
     if (!response.ok) {
       throw new Error(`Failed to get evaluation details: ${response.statusText}`);
@@ -259,7 +262,7 @@ export const getEvaluationDetails = async (evaluationId) => {
 // Get user session history
 export const getUserSessions = async (page = 1, perPage = 10) => {
   try {
-    const response = await authFetch(`/api/sessions/history?page=${page}&per_page=${perPage}`);
+    const response = await authFetch(`${API_BASE_URL}/api/sessions/history?page=${page}&per_page=${perPage}`);
 
     if (!response.ok) {
       throw new Error(`Failed to get session history: ${response.statusText}`);
@@ -275,7 +278,7 @@ export const getUserSessions = async (page = 1, perPage = 10) => {
 // Get user dashboard data (combines evaluations, sessions, and other stats)
 export const getDashboardData = async () => {
   try {
-    const response = await authFetch('/api/dashboard');
+    const response = await authFetch(`${API_BASE_URL}/api/dashboard`);
 
     if (!response.ok) {
       throw new Error(`Failed to get dashboard data: ${response.statusText}`);
@@ -299,7 +302,7 @@ export const testAuth = async () => {
       return { authenticated: false, error: "No token found" };
     }
 
-    const response = await fetch('/api/auth/test', {
+    const response = await fetch(`${API_BASE_URL}/api/auth/test`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
