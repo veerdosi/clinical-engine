@@ -43,4 +43,5 @@ window.fetch = async function(url, options = {}) {
 
 console.log('Fetch interceptor installed. All API requests will include auth tokens.');
 
-export default {}; // Export empty object to satisfy module system
+const fetchInterceptor = {}; // Export empty object to satisfy module system
+export default fetchInterceptor;

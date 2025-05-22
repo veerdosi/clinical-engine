@@ -9,7 +9,7 @@ const InactivityReminder = ({ inactivityThreshold = 120 }) => {
     if (inactivityTimer) {
       clearTimeout(inactivityTimer);
     }
-    
+
     inactivityTimer = setTimeout(() => {
       setIsVisible(true);
     }, inactivityThreshold * 1000); // Convert to milliseconds
@@ -23,33 +23,33 @@ const InactivityReminder = ({ inactivityThreshold = 120 }) => {
   useEffect(() => {
     // Set up event listeners for user activity
     const activityEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
-    
+
     const handleUserActivity = () => {
       if (isVisible) {
         setIsVisible(false);
       }
       resetTimer();
     };
-    
+
     // Add event listeners
     activityEvents.forEach(event => {
       window.addEventListener(event, handleUserActivity);
     });
-    
+
     // Initialize timer
     resetTimer();
-    
+
     // Clean up
     return () => {
       if (inactivityTimer) {
         clearTimeout(inactivityTimer);
       }
-      
+
       activityEvents.forEach(event => {
         window.removeEventListener(event, handleUserActivity);
       });
     };
-  }, [isVisible]);
+  }, [isVisible, inactivityThreshold]);
 
   if (!isVisible) {
     return null;

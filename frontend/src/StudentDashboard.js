@@ -34,7 +34,6 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     accuracyRate: 0
   });
   const [recentCases, setRecentCases] = useState([]);
-  const [specialtyPerformance, setSpecialtyPerformance] = useState([]);
   const [learningResources, setLearningResources] = useState([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [performanceData, setPerformanceData] = useState([]);
@@ -90,7 +89,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
 
     // Generate sample performance data until real data is available
     generateSamplePerformanceData();
-  }, []);
+  }, [processFullDashboardData, processSessionsData]);
 
   // Handle click outside to close dropdown
   useEffect(() => {

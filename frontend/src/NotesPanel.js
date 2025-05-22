@@ -30,17 +30,17 @@ const NotesPanel = ({ caseInfo, isDisabled, onNoteUpdate }) => {
   // Auto-save notes every 5 seconds if changed
   useEffect(() => {
     let autoSaveTimer;
-    
+
     if (caseInfo && caseInfo.id && isExpanded) {
       autoSaveTimer = setInterval(() => {
         saveNotes();
       }, 5000);
     }
-    
+
     return () => {
       if (autoSaveTimer) clearInterval(autoSaveTimer);
     };
-  }, [notes, caseInfo, isExpanded]);
+  }, [notes, caseInfo, isExpanded, onNoteUpdate]);
 
   const saveNotes = () => {
     if (caseInfo && caseInfo.id) {
@@ -90,8 +90,8 @@ const NotesPanel = ({ caseInfo, isDisabled, onNoteUpdate }) => {
   return (
     <div className={`notes-panel-container ${isExpanded ? 'expanded' : ''}`}>
       {!isExpanded ? (
-        <button 
-          className="notes-toggle-btn" 
+        <button
+          className="notes-toggle-btn"
           onClick={togglePanel}
           title="SOAP Notes"
           disabled={isDisabled}
@@ -110,34 +110,34 @@ const NotesPanel = ({ caseInfo, isDisabled, onNoteUpdate }) => {
               <button className="notes-close-btn" onClick={togglePanel}>×</button>
             </div>
           </div>
-          
+
           <div className="notes-tabs">
-            <button 
+            <button
               className={`tab-btn ${activeTab === 'subjective' ? 'active' : ''}`}
               onClick={() => setActiveTab('subjective')}
             >
               Subjective
             </button>
-            <button 
+            <button
               className={`tab-btn ${activeTab === 'objective' ? 'active' : ''}`}
               onClick={() => setActiveTab('objective')}
             >
               Objective
             </button>
-            <button 
+            <button
               className={`tab-btn ${activeTab === 'assessment' ? 'active' : ''}`}
               onClick={() => setActiveTab('assessment')}
             >
               Assessment
             </button>
-            <button 
+            <button
               className={`tab-btn ${activeTab === 'plan' ? 'active' : ''}`}
               onClick={() => setActiveTab('plan')}
             >
               Plan
             </button>
           </div>
-          
+
           <div className="notes-content">
             <textarea
               className="notes-textarea"
@@ -147,13 +147,13 @@ const NotesPanel = ({ caseInfo, isDisabled, onNoteUpdate }) => {
               disabled={isDisabled}
             />
           </div>
-          
+
           <div className="notes-actions">
             <div className="notes-info">
               <span className="word-count">Words: {countTotalWords()}</span>
               <span className="patient-info">{caseInfo?.name}, {caseInfo?.age}{caseInfo?.gender === 'Male' ? 'M' : 'F'}</span>
             </div>
-            <button 
+            <button
               className="save-btn"
               onClick={saveNotes}
               disabled={isDisabled}

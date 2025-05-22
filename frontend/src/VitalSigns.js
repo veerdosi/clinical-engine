@@ -133,13 +133,12 @@ const VitalSigns = () => {
 // Heart Rate Monitor Component
 const HeartRateMonitor = ({ rate }) => {
   const canvasRef = useRef(null);
-  const [ecgPoints, setEcgPoints] = useState([]);
 
   useEffect(() => {
     const beatDuration = 60000 / rate; // ms per beat
     const pointsPerBeat = 100;
     const totalPoints = 150;
-    
+
     // Generate one ECG pattern
     const generateECGPattern = () => {
       const pattern = [];
@@ -170,16 +169,15 @@ const HeartRateMonitor = ({ rate }) => {
       }
       return pattern;
     };
-    
+
     const basePattern = generateECGPattern();
     let animationId;
     let currentPoint = 0;
     let points = Array(totalPoints).fill(5);
-    
+
     const animate = () => {
       const patternPos = currentPoint % basePattern.length;
       points = [...points.slice(1), basePattern[patternPos]];
-      setEcgPoints([...points]);
       const canvas = canvasRef.current;
       if (canvas) {
         const ctx = canvas.getContext('2d');
@@ -204,11 +202,11 @@ const HeartRateMonitor = ({ rate }) => {
       const frameDelay = beatDuration / pointsPerBeat;
       animationId = setTimeout(animate, frameDelay);
     };
-    
+
     animate();
     return () => clearTimeout(animationId);
   }, [rate]);
-  
+
   return (
     <div className="heart-rate-monitor">
       <canvas ref={canvasRef} width={300} height={80} />
@@ -234,33 +232,33 @@ const BloodPressureVisual = ({ systolic, diastolic }) => {
   const maxSystolic = 180;
   const systolicPercentage = Math.min(100, (systolic / maxSystolic) * 100);
   const diastolicPercentage = Math.min(100, (diastolic / maxSystolic) * 100);
-  
+
   const getSystolicColor = () => {
     if (systolic < 90) return '#3498db';
     if (systolic > 140) return '#e74c3c';
     return '#2ecc71';
   };
-  
+
   const getDiastolicColor = () => {
     if (diastolic < 60) return '#3498db';
     if (diastolic > 90) return '#e74c3c';
     return '#2ecc71';
   };
-  
+
   return (
     <div className="bp-visual">
       <div className="bp-gauge">
-        <div className="bp-bar systolic" 
-             style={{ 
-               height: `${systolicPercentage}%`, 
-               backgroundColor: getSystolicColor() 
+        <div className="bp-bar systolic"
+             style={{
+               height: `${systolicPercentage}%`,
+               backgroundColor: getSystolicColor()
              }}>
           <span>{systolic}</span>
         </div>
-        <div className="bp-bar diastolic" 
-             style={{ 
-               height: `${diastolicPercentage}%`, 
-               backgroundColor: getDiastolicColor() 
+        <div className="bp-bar diastolic"
+             style={{
+               height: `${diastolicPercentage}%`,
+               backgroundColor: getDiastolicColor()
              }}>
           <span>{diastolic}</span>
         </div>
@@ -278,22 +276,22 @@ const TemperatureVisual = ({ temperature }) => {
   const minTemp = 35; // °C
   const maxTemp = 40; // °C
   let percentage = Math.max(0, Math.min(100, ((temperature - minTemp) / (maxTemp - minTemp)) * 100));
-  
+
   const getColor = () => {
     if (temperature < 36.5) return '#3498db';
     if (temperature > 37.5) return '#e74c3c';
     return '#2ecc71';
   };
-  
+
   return (
     <div className="temperature-visual">
       <div className="thermometer">
         <div className="thermometer-bulb"></div>
         <div className="thermometer-stem">
-          <div className="thermometer-fill" 
-               style={{ 
-                 height: `${percentage}%`, 
-                 backgroundColor: getColor() 
+          <div className="thermometer-fill"
+               style={{
+                 height: `${percentage}%`,
+                 backgroundColor: getColor()
                }}>
           </div>
         </div>
@@ -305,17 +303,17 @@ const TemperatureVisual = ({ temperature }) => {
 // Oxygen Saturation Visualization Component
 const OxygenSaturationVisual = ({ value }) => {
   const pulseOpacity = Math.max(0.2, Math.min(0.8, value / 100));
-  
+
   const getColor = () => {
     if (value < 90) return '#e74c3c';
     if (value < 95) return '#f39c12';
     return '#2ecc71';
   };
-  
+
   return (
     <div className="oxygen-visual">
-      <div className="oxygen-pulse" 
-           style={{ 
+      <div className="oxygen-pulse"
+           style={{
              '--pulse-color': getColor(),
              '--pulse-opacity': pulseOpacity
            }}>
@@ -340,10 +338,10 @@ const PainScoreVisual = ({ score }) => {
     { emoji: "😭", color: "#e44038" },
     { emoji: "🤯", color: "#e32839" }
   ];
-  
+
   const faceIndex = Math.max(0, Math.min(10, Math.floor(score)));
   const { emoji, color } = painFaces[faceIndex];
-  
+
   return (
     <div className="pain-visual" style={{ color }}>
       <div className="pain-face">{emoji}</div>
