@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'; 
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getUserEvaluations, getUserSessions, getDashboardData } from './api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Calendar, Clock, ArrowUpRight, ChevronRight, User, Book, FileText, Activity, HelpCircle, LogOut, ChevronDown } from 'lucide-react';
+import { Calendar, Clock, ArrowUpRight, ChevronRight, User, Book, FileText, Activity, HelpCircle, LogOut, ChevronDown, Award } from 'lucide-react'; // Added Award icon
 import './StudentDashboard.css';
 
 // Portal-based dropdown for the avatar
@@ -34,11 +34,11 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     accuracyRate: 0
   });
   const [recentCases, setRecentCases] = useState([]);
-  const [specialtyPerformance, setSpecialtyPerformance] = useState([]); // Added state
+  const [specialtyPerformance, setSpecialtyPerformance] = useState([]); // Kept this state
   const [learningResources, setLearningResources] = useState([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [performanceData, setPerformanceData] = useState([]);
-  const dropdownRef = useRef(null); // Changed from React.useRef to useRef
+  const dropdownRef = useRef(null);
 
   const generateLearningResources = useCallback(() => {
     const upcomingModules = [
@@ -47,7 +47,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
       { id: 3, title: 'Differential Diagnosis Skills', completion: 80, dueDate: '3 days' }
     ];
     setLearningResources(upcomingModules);
-  }, []); // setLearningResources is stable
+  }, []);
 
   const processFullDashboardData = useCallback((data) => {
     if (data.stats) {
@@ -61,19 +61,20 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
       setRecentCases(data.recentCases);
     }
     if (data.specialtyPerformance && Array.isArray(data.specialtyPerformance)) {
-      setSpecialtyPerformance(data.specialtyPerformance);
+      setSpecialtyPerformance(data.specialtyPerformance); // Use this if provided
     }
+    // If data.specialtyPerformance is not provided, processEvaluationsData will handle it if evaluations are fetched.
     if (data.learningResources && Array.isArray(data.learningResources)) {
       setLearningResources(data.learningResources);
     } else {
       generateLearningResources();
     }
-  }, [generateLearningResources]); // State setters are stable
+  }, [generateLearningResources]);
 
   const processEvaluationsData = useCallback((evaluations) => {
     if (!evaluations || evaluations.length === 0) {
       setStats(prev => ({ ...prev, completedCases: 0, accuracyRate: 0 }));
-      // Do not clear recentCases here as it might already have in-progress cases
+      setSpecialtyPerformance([]); // Clear specialty performance if no evaluations
       return;
     }
 
@@ -82,7 +83,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     const accuracyRate = completed > 0 ? Math.round((correct / completed) * 100) : 0;
 
     setStats(prevStats => ({
-      ...prevStats, // Keep totalCases which might include in-progress
+      ...prevStats,
       completedCases: completed,
       accuracyRate: accuracyRate
     }));
@@ -98,6 +99,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
         difficulty: item.case_data?.difficulty || 'Unknown',
         status: 'Completed',
         completed: new Date(item.timestamp).toLocaleDateString(),
+        completedTimestamp: new Date(item.timestamp).toISOString(),
         diagnosisCorrect: item.is_correct,
         score: item.is_correct ? Math.floor(Math.random() * 15) + 85 : Math.floor(Math.random() * 15) + 65,
         diagnosis: item.submission?.diagnosis || 'Unknown',
@@ -105,37 +107,37 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
       }));
 
     setRecentCases(prevRecent => {
-      // Combine with existing in-progress cases if any, then add completed, then sort and slice
       const inProgressFromPrev = prevRecent.filter(c => c.status === 'In Progress');
       const combined = [...inProgressFromPrev, ...recentCompletedCases];
-      // Deduplicate based on ID, prioritizing updated status (e.g. if a case was in-progress and now completed)
       const uniqueCases = Array.from(new Map(combined.map(c => [c.id, c])).values());
       return uniqueCases.sort((a, b) => new Date(b.completedTimestamp || b.completed) - new Date(a.completedTimestamp || a.completed)).slice(0, 10);
     });
 
-
+    // Calculate and set specialtyPerformance
     const specialties = {};
     evaluations.forEach(item => {
       const specialty = item.case_data?.specialty || 'Unknown';
       if (!specialties[specialty]) {
-        specialties[specialty] = { total: 0, correct: 0 };
+        specialties[specialty] = { total: 0, correct: 0, name: specialty };
       }
       specialties[specialty].total++;
       if (item.is_correct) {
         specialties[specialty].correct++;
       }
     });
-    const specialtyStats = Object.keys(specialties).map(specialty => ({
-      specialty,
-      accuracy: Math.round((specialties[specialty].correct / specialties[specialty].total) * 100)
+
+    const specialtyStats = Object.values(specialties).map(specData => ({
+      specialty: specData.name,
+      accuracy: specData.total > 0 ? Math.round((specData.correct / specData.total) * 100) : 0
     }));
+
     specialtyStats.sort((a, b) => b.accuracy - a.accuracy);
-    setSpecialtyPerformance(specialtyStats);
-  }, []); // State setters are stable
+    setSpecialtyPerformance(specialtyStats); // Set the state here
+  }, []);
 
   const processSessionsData = useCallback((sessions) => {
     if (!sessions || sessions.length === 0) {
-      setStats(prev => ({ ...prev, totalCases: prev.completedCases })); // No in-progress
+      setStats(prev => ({ ...prev, totalCases: prev.completedCases }));
       return;
     }
 
@@ -149,9 +151,8 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
         specialty: session.case_data?.specialty || 'General',
         difficulty: session.case_data?.difficulty || 'Unknown',
         status: 'In Progress',
-        // Using a timestamp for sorting, and a display string
-        completedTimestamp: new Date(session.last_updated_at || Date.now()).toISOString(), // for sorting
-        completed: session.last_updated_at ? `${Math.round((Date.now() - new Date(session.last_updated_at).getTime()) / (1000 * 60 * 60 * 24))} days ago` : 'Just now', // for display
+        completedTimestamp: new Date(session.last_updated_at || Date.now()).toISOString(),
+        completed: session.last_updated_at ? `${Math.round((Date.now() - new Date(session.last_updated_at).getTime()) / (1000 * 60 * 60 * 24))} days ago` : 'Just now',
         diagnosisCorrect: null,
         diagnosis: 'In Progress',
         score: null,
@@ -169,7 +170,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
       ...prevStats,
       totalCases: prevStats.completedCases + inProgressCases.length
     }));
-  }, []); // State setters are stable
+  }, []);
 
   const generateSamplePerformanceData = useCallback(() => {
     const sampleData = [
@@ -177,36 +178,49 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
       { date: 'Apr', score: 89 }, { date: 'May', score: 85 }, { date: 'Jun', score: 92 }
     ];
     setPerformanceData(sampleData);
-  }, []); // setPerformanceData is stable
+  }, []);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        setError(null); // Reset error on new fetch
+        setError(null);
 
+        let combinedDataUsed = false;
         try {
           const dashboardData = await getDashboardData();
           if (dashboardData) {
             processFullDashboardData(dashboardData);
-            setLoading(false);
-            return;
+            // If specialtyPerformance is not in dashboardData, it will be calculated by processEvaluationsData if evaluations are also fetched.
+            // If dashboardData.evaluations exists, processEvaluationsData could be called here to ensure specialtyPerf is set.
+            if (dashboardData.evaluations && !dashboardData.specialtyPerformance) {
+                processEvaluationsData(dashboardData.evaluations);
+            }
+            combinedDataUsed = true;
           }
         } catch (dashboardError) {
           console.warn("Combined dashboard endpoint failed or not available, falling back to individual endpoints:", dashboardError);
         }
 
-        const [evaluationsResponse, sessionsResponse] = await Promise.all([
-          getUserEvaluations().catch(e => { console.error("Failed to get evaluations:", e); return null; }),
-          getUserSessions().catch(e => { console.error("Failed to get sessions:", e); return null; })
-        ]);
-
-        if (evaluationsResponse && evaluationsResponse.evaluations) {
-          processEvaluationsData(evaluationsResponse.evaluations);
-        }
-
-        if (sessionsResponse && sessionsResponse.sessions) {
-          processSessionsData(sessionsResponse.sessions);
+        // Fallback if combined endpoint didn't provide all data or failed
+        if (!combinedDataUsed || !specialtyPerformance.length) { // Check if specialtyPerformance needs calculation
+            const [evaluationsResponse, sessionsResponse] = await Promise.all([
+              getUserEvaluations().catch(e => { console.error("Failed to get evaluations:", e); return null; }),
+              getUserSessions().catch(e => { console.error("Failed to get sessions:", e); return null; })
+            ]);
+    
+            if (evaluationsResponse && evaluationsResponse.evaluations) {
+              processEvaluationsData(evaluationsResponse.evaluations);
+            } else if (!combinedDataUsed) { // only if not already set by combined data
+              setStats(prev => ({ ...prev, completedCases: 0, accuracyRate: 0 }));
+              setSpecialtyPerformance([]);
+            }
+    
+            if (sessionsResponse && sessionsResponse.sessions) {
+              processSessionsData(sessionsResponse.sessions);
+            } else if (!combinedDataUsed) {
+                setStats(prev => ({ ...prev, totalCases: prev.completedCases }));
+            }
         }
         
         generateLearningResources();
@@ -225,7 +239,8 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     processEvaluationsData, 
     processSessionsData, 
     generateLearningResources, 
-    generateSamplePerformanceData
+    generateSamplePerformanceData,
+    specialtyPerformance.length // Added to re-evaluate if specialtyPerformance was not set by combined endpoint
   ]);
 
   useEffect(() => {
@@ -258,6 +273,14 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     setIsDropdownOpen(!isDropdownOpen);
   };
 
+  const getAccuracyColor = (accuracy) => {
+    if (accuracy >= 90) return '#16a34a'; // text-green-600
+    if (accuracy >= 80) return '#2563eb'; // text-blue-600
+    if (accuracy >= 70) return '#ca8a04'; // text-yellow-600
+    return '#dc2626'; // text-red-600
+  };
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -276,7 +299,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
           <h3 className="text-xl font-bold text-red-600 mb-4">Error Loading Dashboard</h3>
           <p className="text-gray-700 mb-6">{error}</p>
           <button
-            onClick={() => window.location.reload()} // Simple retry by reloading
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition-colors"
           >
             Try Again
@@ -319,7 +342,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
                 onClick={() => { /* TODO: Implement Profile navigation */ }}
                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
               >
-                <User className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" /> {/* Changed icon */}
+                <User className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
                 Profile
               </button>
               <button
@@ -339,7 +362,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg text-white p-6 mb-8">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-2xl font-bold mb-2">Welcome back, {user?.name?.split(' ')[0] || 'User'}!</h2> {/* Updated welcome message */}
+              <h2 className="text-2xl font-bold mb-2">Welcome back, {user?.name?.split(' ')[0] || 'User'}!</h2>
               <p className="mb-4 opacity-90">Continue your clinical training or start a new case.</p>
               <div className="flex space-x-4">
                 <button
@@ -348,7 +371,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
                 >
                   Start New Case
                 </button>
-                {recentCases.find(c => c.status === 'In Progress') && ( // Check if any in-progress case exists
+                {recentCases.find(c => c.status === 'In Progress') && (
                   <button
                     onClick={() => {
                         const inProgress = recentCases.find(c => c.status === 'In Progress');
@@ -362,9 +385,9 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
               </div>
             </div>
             <div className="bg-blue-900 bg-opacity-30 rounded-lg p-4 text-center">
-              <p className="text-sm opacity-80">Avg. Score</p> {/* Changed from "Your Progress" */}
+              <p className="text-sm opacity-80">Avg. Score</p>
               <h3 className="text-3xl font-bold">{stats.accuracyRate}%</h3>
-              <p className="text-sm opacity-80">Accuracy</p> {/* Changed from "Completed" */}
+              <p className="text-sm opacity-80">Accuracy</p>
             </div>
           </div>
         </div>
@@ -403,7 +426,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
 
             {/* Recent Cases */}
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="flex justify-between items-center p-6 border-b border-gray-200"> {/* Added border color */}
+              <div className="flex justify-between items-center p-6 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-gray-800">Recent Cases</h2>
                 <button className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
                   View All <ChevronRight className="w-4 h-4 ml-1" />
@@ -418,12 +441,12 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
                 <div className="divide-y divide-gray-200">
                   {recentCases.map(caseItem => (
                     <div key={caseItem.id} className="p-6 hover:bg-gray-50 transition-colors">
-                      <div className="flex justify-between items-start mb-2"> {/* items-start for alignment */}
+                      <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center">
-                          <User className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" /> {/* flex-shrink-0 */}
+                          <User className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" />
                           <h3 className="font-medium text-gray-900">{caseItem.name}, {caseItem.age}{caseItem.gender}</h3>
                         </div>
-                        <div className="flex items-center text-sm text-gray-500 whitespace-nowrap"> {/* whitespace-nowrap */}
+                        <div className="flex items-center text-sm text-gray-500 whitespace-nowrap">
                           <Clock className="w-4 h-4 mr-1" />
                           <span>{caseItem.completed}</span>
                         </div>
@@ -456,7 +479,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
                             </div>
                           )}
                           <button
-                            onClick={() => caseItem.status === 'In Progress' ? handleResumeCase(caseItem.id) : alert('Review functionality not yet implemented.')} // Placeholder for review
+                            onClick={() => caseItem.status === 'In Progress' ? handleResumeCase(caseItem.id) : alert('Review functionality not yet implemented.')}
                             className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm rounded-md"
                           >
                             {caseItem.status === 'In Progress' ? 'Resume' : 'Review'}
@@ -488,7 +511,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
               <div className="bg-white rounded-lg shadow p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500">Avg. Score</p> {/* Matches welcome card */}
+                    <p className="text-sm text-gray-500">Avg. Score</p>
                     <p className="text-2xl font-bold text-gray-800">{stats.accuracyRate}%</p>
                   </div>
                   <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
@@ -497,10 +520,32 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
                 </div>
               </div>
             </div>
+            
+            {/* Specialty Performance - NEW CARD */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-800">Specialty Performance</h2>
+              </div>
+              <div className="divide-y divide-gray-200 max-h-60 overflow-y-auto"> {/* Added max-height and scroll */}
+                {specialtyPerformance.length > 0 ? specialtyPerformance.map(spec => (
+                  <div key={spec.specialty} className="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center">
+                      <Award className="w-5 h-5 mr-3 flex-shrink-0" style={{color: getAccuracyColor(spec.accuracy)}} />
+                      <span className="text-gray-700 font-medium">{spec.specialty}</span>
+                    </div>
+                    <span className="font-semibold text-sm" style={{ color: getAccuracyColor(spec.accuracy) }}>
+                      {spec.accuracy}%
+                    </span>
+                  </div>
+                )) : (
+                  <p className="p-4 text-gray-500 text-sm">No specialty performance data available yet.</p>
+                )}
+              </div>
+            </div>
 
             {/* Upcoming Learning Modules */}
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="p-6 border-b border-gray-200"> {/* Added border color */}
+              <div className="p-6 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-gray-800">Upcoming Modules</h2>
               </div>
               <div className="divide-y divide-gray-200">
@@ -514,7 +559,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
                       </div>
                     </div>
                     <div className="relative pt-1">
-                      <div className="flex mb-1 items-center justify-between"> {/* Reduced margin */}
+                      <div className="flex mb-1 items-center justify-between">
                         <div>
                           <span className="text-xs font-semibold inline-block text-blue-600">
                             {module.completion}% Complete
@@ -563,7 +608,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
                 </button>
                 <button className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-md transition-colors">
                   <span className="flex items-center">
-                    <FileText className="w-5 h-5 mr-2" /> {/* Changed icon to FileText */}
+                    <FileText className="w-5 h-5 mr-2" />
                     Assessment Reports
                   </span>
                   <ArrowUpRight className="w-4 h-4" />
