@@ -135,7 +135,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     }
 
     if (data.specialtyPerformance && Array.isArray(data.specialtyPerformance)) {
-      setSpecialtyPerformance(data.specialtyPerformance);
+      // Process specialty performance data
     }
 
     if (data.learningResources && Array.isArray(data.learningResources)) {
@@ -205,7 +205,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     // Sort by accuracy (descending)
     specialtyStats.sort((a, b) => b.accuracy - a.accuracy);
 
-    setSpecialtyPerformance(specialtyStats);
+    // Store specialty performance data (currently not used in UI)
   };
 
   const processSessionsData = (sessions) => {
