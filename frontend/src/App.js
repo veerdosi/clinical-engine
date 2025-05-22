@@ -1,5 +1,3 @@
-// Complete App.js with tabbed navigation, VitalSigns, NotesPanel integration,
-// and conversation history persistence
 import React, { useState, useEffect } from 'react';
 import ChatWindow from './ChatWindow';
 import DiagnosisPanel from './DiagnosisPanel';
@@ -25,7 +23,6 @@ function App() {
   const [showCaseSelection, setShowCaseSelection] = useState(true); // Start with case selection
   const [showExplicitCaseSelection, setShowExplicitCaseSelection] = useState(false); // For showing case selection from dashboard
   const [activeTab, setActiveTab] = useState('patient'); // Default to patient tab
-  const [notes, setNotes] = useState({}); // Add state for notes
   const [conversationHistory, setConversationHistory] = useState([]); // Add state for conversation history
   const [authenticated, setAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
@@ -75,7 +72,6 @@ function App() {
     } catch (err) {
       console.error('Error fetching case:', err);
       setError('Unable to load patient case. Please try again later.');
-      // If we can't fetch a case, go back to case selection screen
       setShowCaseSelection(true);
     } finally {
       setLoading(false);
@@ -85,7 +81,6 @@ function App() {
   const handleNewCase = async (specialty, difficulty) => {
     setLoading(true);
     try {
-      // Optional parameters for specialty and difficulty if passed
       const body = {};
       if (specialty) body.specialty = specialty;
       if (difficulty) body.difficulty = difficulty;
@@ -106,21 +101,13 @@ function App() {
       setCaseInfo(data);
       setError(null);
       setIsDiagnosisSubmitted(false);
-
-      // Signal to child components that we have a new case
       setIsNewCase(true);
 
-      // Reset notes for new case
-      setNotes({});
+      // REMOVED: setNotes({}); // No longer managing 'notes' state here
 
-      // Reset conversation history
       setConversationHistory([]);
-
-      // Hide case selection screen when we have a case
       setShowCaseSelection(false);
       setShowExplicitCaseSelection(false);
-
-      // Reset to the patient tab
       setActiveTab('patient');
 
       return true;
@@ -138,9 +125,9 @@ function App() {
     setIsNewCase(true);
     setShowCaseSelection(false);
     setShowExplicitCaseSelection(false);
-    setActiveTab('patient'); // Reset to the patient tab
-    setNotes({}); // Reset notes
-    setConversationHistory([]); // Reset conversation history
+    setActiveTab('patient');
+    // REMOVED: setNotes({}); // No longer managing 'notes' state here
+    setConversationHistory([]);
   };
 
   const handleDiagnosisSubmitted = () => {
@@ -148,7 +135,6 @@ function App() {
   };
 
   const handleNewCaseStarted = () => {
-    // Reset the new case flag once processed by child components
     setIsNewCase(false);
   };
 
@@ -157,15 +143,13 @@ function App() {
     setShowExplicitCaseSelection(false);
     setIsDiagnosisSubmitted(false);
     setIsNewCase(false);
-    setNotes({});
+    // REMOVED: setNotes({}); // No longer managing 'notes' state here
     setConversationHistory([]);
   };
 
-  // Handle notes update
+  // Handle notes update from NotesPanel (e.g., to save to backend)
   const handleNotesUpdate = (updatedNotes) => {
-    setNotes(updatedNotes);
 
-    // If we want to save to the backend as well
     if (caseInfo && caseInfo.id) {
       fetch('/api/save-notes', {
         method: 'POST',
@@ -173,7 +157,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          notes: updatedNotes,
+          notes: updatedNotes, 
           case_id: caseInfo.id
         })
       }).catch(err => {
@@ -182,7 +166,6 @@ function App() {
     }
   };
 
-  // Handle new messages in conversation
   const handleNewMessage = (message) => {
     setConversationHistory(prev => [...prev, message]);
   };
@@ -202,14 +185,14 @@ function App() {
     setAuthenticated(false);
     setUser(null);
     setCaseInfo(null);
-    setNotes({});
+    // REMOVED: setNotes({});
     setConversationHistory([]);
     setIsDiagnosisSubmitted(false);
+    // Potentially redirect to login or clear other states as needed
   };
 
   // Show login screen if not authenticated
   if (!authenticated) {
-    // Show auth tester if URL has ?test-auth=true
     if (window.location.search.includes('test-auth=true')) {
       return (
         <div>
@@ -225,12 +208,9 @@ function App() {
         </div>
       );
     }
-
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // IMPORTANT: Check for explicit case selection first
-  // Handle showing case selection screen when requested from dashboard
   if (showExplicitCaseSelection) {
     console.log("App: showExplicitCaseSelection is true, showing CaseSelectionScreen with back button");
     return (
@@ -241,28 +221,20 @@ function App() {
     );
   }
 
-  // Then handle the regular dashboard view
   if (showCaseSelection) {
-    // If it's explicitly marked as showing case selection, render it
     if (window.location.search.includes('skip-dashboard=true')) {
       return <CaseSelectionScreen onCaseGenerated={handleCaseGenerated} />;
     }
-
-    // Otherwise, show the student dashboard as the main landing screen
     return (
       <StudentDashboard
         user={user}
         onStartNewCase={() => {
-          // Show case selection screen but keep showCaseSelection as true
-          // so we can return to dashboard afterward
           console.log("App: onStartNewCase called, setting showExplicitCaseSelection=true");
           setShowExplicitCaseSelection(true);
         }}
         onResumeCaseClick={(caseId) => {
-          // Handle resuming a specific case
-          // In a real implementation, this would load the specified case
           console.log("Resuming case:", caseId);
-          fetchCurrentCase();
+          fetchCurrentCase(); // Assuming this fetches the specific case or current in-progress
           setShowCaseSelection(false);
         }}
       />
@@ -294,26 +266,18 @@ function App() {
   const getCaseUrgency = () => {
     if (!caseInfo) return 'medium';
     const difficulty = caseInfo.difficulty?.toLowerCase() || '';
-    if (difficulty === 'hard') {
-      return 'high';
-    } else if (difficulty === 'moderate') {
-      return 'medium';
-    }
-
+    if (difficulty === 'hard') return 'high';
+    if (difficulty === 'moderate') return 'medium';
     return 'low';
   };
 
   const getInactivityThreshold = () => {
     const urgency = getCaseUrgency();
     switch (urgency) {
-      case 'high':
-        return 60; // 1 minute for urgent cases
-      case 'medium':
-        return 120; // 2 minutes for moderate cases
-      case 'low':
-        return 180; // 3 minutes for low urgency cases
-      default:
-        return 120; // Default to 2 minutes
+      case 'high': return 60;
+      case 'medium': return 120;
+      case 'low': return 180;
+      default: return 120;
     }
   };
 
@@ -330,10 +294,7 @@ function App() {
               <div className="user-profile">
                 {user.picture && <img src={user.picture} alt={user.name} className="user-avatar" />}
                 <span className="user-name">{user.name}</span>
-                <button
-                  className="logout-btn"
-                  onClick={handleLogout}
-                >
+                <button className="logout-btn" onClick={handleLogout}>
                   Logout
                 </button>
               </div>
@@ -353,7 +314,6 @@ function App() {
                   <span className="badge-label">Specialty:</span>
                   <span className="badge-value">{caseInfo.specialty}</span>
                 </div>
-                {/* Added a button to return to case selection */}
                 <button
                   className="new-selection-btn"
                   onClick={handleReturnToSelection}
@@ -366,30 +326,17 @@ function App() {
           </div>
         </div>
 
-        {/* Tab Navigation */}
         <div className="tab-navigation">
-          <button
-            className={`tab-button ${activeTab === 'patient' ? 'active' : ''}`}
-            onClick={() => setActiveTab('patient')}
-          >
+          <button className={`tab-button ${activeTab === 'patient' ? 'active' : ''}`} onClick={() => setActiveTab('patient')}>
             Patient Interaction
           </button>
-          <button
-            className={`tab-button ${activeTab === 'labs' ? 'active' : ''}`}
-            onClick={() => setActiveTab('labs')}
-          >
+          <button className={`tab-button ${activeTab === 'labs' ? 'active' : ''}`} onClick={() => setActiveTab('labs')}>
             Laboratory Tests
           </button>
-          <button
-            className={`tab-button ${activeTab === 'imaging' ? 'active' : ''}`}
-            onClick={() => setActiveTab('imaging')}
-          >
+          <button className={`tab-button ${activeTab === 'imaging' ? 'active' : ''}`} onClick={() => setActiveTab('imaging')}>
             Imaging Studies
           </button>
-          <button
-            className={`tab-button ${activeTab === 'procedures' ? 'active' : ''}`}
-            onClick={() => setActiveTab('procedures')}
-          >
+          <button className={`tab-button ${activeTab === 'procedures' ? 'active' : ''}`} onClick={() => setActiveTab('procedures')}>
             Procedures
           </button>
         </div>
@@ -398,18 +345,13 @@ function App() {
       <div className="tab-content">
         {activeTab === 'patient' && (
           <div className="patient-tab">
-            {/* Add vital signs monitor at the top */}
             <div className="vital-signs-container">
               <VitalSigns vitals={caseInfo?.vitals || {}} />
             </div>
-
-          {/* Add the InactivityReminder component only when a case is active */}
-          {caseInfo && !showCaseSelection && !isDiagnosisSubmitted && (
-        <InactivityReminder inactivityThreshold={getInactivityThreshold()} />
-          )}
-
+            {caseInfo && !showCaseSelection && !isDiagnosisSubmitted && (
+              <InactivityReminder inactivityThreshold={getInactivityThreshold()} />
+            )}
             <div className="patient-grid-layout">
-              {/* Left column: Chat */}
               <div className="chat-area">
                 <ChatWindow
                   isDiagnosisSubmitted={isDiagnosisSubmitted}
@@ -419,14 +361,8 @@ function App() {
                   onNewMessage={handleNewMessage}
                 />
               </div>
-
-              {/* Right column: Physical exam & diagnosis stacked */}
               <div className="controls-area">
-                <PhysicalExamPanel
-                  isDisabled={isDiagnosisSubmitted}
-                  caseInfo={caseInfo}
-                />
-
+                <PhysicalExamPanel isDisabled={isDiagnosisSubmitted} caseInfo={caseInfo} />
                 <DiagnosisPanel
                   case_info={caseInfo}
                   onNewCase={handleNewCase}
@@ -443,10 +379,7 @@ function App() {
             <div className="tab-container">
               <h2>Laboratory Testing</h2>
               <p className="tab-description">Order laboratory tests and review results to aid in your diagnosis.</p>
-              <TestOrderingPanel
-                isDisabled={isDiagnosisSubmitted}
-                forceTabType="lab"
-              />
+              <TestOrderingPanel isDisabled={isDiagnosisSubmitted} forceTabType="lab" />
             </div>
           </div>
         )}
@@ -456,10 +389,7 @@ function App() {
             <div className="tab-container">
               <h2>Imaging Studies</h2>
               <p className="tab-description">Order imaging studies and review radiologic findings to support your diagnostic workup.</p>
-              <TestOrderingPanel
-                isDisabled={isDiagnosisSubmitted}
-                forceTabType="imaging"
-              />
+              <TestOrderingPanel isDisabled={isDiagnosisSubmitted} forceTabType="imaging" />
             </div>
           </div>
         )}
@@ -470,26 +400,21 @@ function App() {
               <h2>Investigative Procedures</h2>
               <p className="tab-description">Order specialized procedures to gather additional diagnostic information.</p>
               <div className="procedures-info">
-                <TestOrderingPanel
-                  isDisabled={isDiagnosisSubmitted}
-                  forceTabType="procedure"
-                />
+                <TestOrderingPanel isDisabled={isDiagnosisSubmitted} forceTabType="procedure" />
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Add NotesPanel - always visible across all tabs */}
       {caseInfo && (
         <NotesPanel
           caseInfo={caseInfo}
           isDisabled={isDiagnosisSubmitted}
-          onNoteUpdate={handleNotesUpdate}
+          onNoteUpdate={handleNotesUpdate} 
         />
       )}
 
-      {/* Add footer with session metrics */}
       {caseInfo && !isDiagnosisSubmitted && (
         <footer className="app-footer">
           <div className="footer-metrics">

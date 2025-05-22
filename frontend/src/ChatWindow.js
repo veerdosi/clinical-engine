@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { sendMessage } from './api';
 import './ChatWindow.css';
 
 const ChatWindow = ({ 

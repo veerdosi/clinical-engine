@@ -1,5 +1,4 @@
-// src/NotesPanel.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; 
 import './NotesPanel.css';
 
 const NotesPanel = ({ caseInfo, isDisabled, onNoteUpdate }) => {
@@ -14,18 +13,34 @@ const NotesPanel = ({ caseInfo, isDisabled, onNoteUpdate }) => {
   const [autoSaveStatus, setAutoSaveStatus] = useState('');
 
   useEffect(() => {
-    // Check if there are notes in session storage for this case
     if (caseInfo && caseInfo.id) {
       const savedNotes = sessionStorage.getItem(`notes_${caseInfo.id}`);
       if (savedNotes) {
         try {
-          setNotes(JSON.parse(savedNotes));
+          const parsedNotes = JSON.parse(savedNotes);
+          setNotes(parsedNotes);
         } catch (e) {
           console.error('Error parsing saved notes:', e);
+          // Optionally reset to default if parsing fails
+          setNotes({ subjective: '', objective: '', assessment: '', plan: '' });
         }
+      } else {
+        // Reset notes if no saved notes for new caseId
+        setNotes({ subjective: '', objective: '', assessment: '', plan: '' });
       }
     }
-  }, [caseInfo]);
+  }, [caseInfo]); // Runs when caseInfo changes
+
+  const saveNotes = useCallback(() => {
+    if (caseInfo && caseInfo.id) {
+      sessionStorage.setItem(`notes_${caseInfo.id}`, JSON.stringify(notes));
+      if (onNoteUpdate) {
+        onNoteUpdate(notes);
+      }
+      setAutoSaveStatus('Saved');
+      setTimeout(() => setAutoSaveStatus(''), 2000);
+    }
+  }, [caseInfo, notes, onNoteUpdate]); // Dependencies for saveNotes
 
   // Auto-save notes every 5 seconds if changed
   useEffect(() => {
@@ -33,39 +48,25 @@ const NotesPanel = ({ caseInfo, isDisabled, onNoteUpdate }) => {
 
     if (caseInfo && caseInfo.id && isExpanded) {
       autoSaveTimer = setInterval(() => {
-        saveNotes();
+        saveNotes(); // saveNotes is now memoized
       }, 5000);
     }
 
     return () => {
       if (autoSaveTimer) clearInterval(autoSaveTimer);
     };
-  }, [notes, caseInfo, isExpanded, onNoteUpdate]);
-
-  const saveNotes = () => {
-    if (caseInfo && caseInfo.id) {
-      sessionStorage.setItem(`notes_${caseInfo.id}`, JSON.stringify(notes));
-      // Notify parent component about the note update
-      if (onNoteUpdate) {
-        onNoteUpdate(notes);
-      }
-      setAutoSaveStatus('Saved');
-      setTimeout(() => setAutoSaveStatus(''), 2000);
-    }
-  };
+  }, [caseInfo, isExpanded, saveNotes]); // Added saveNotes to dependencies
 
   const togglePanel = () => {
     setIsExpanded(!isExpanded);
   };
 
   const handleNoteChange = (section, value) => {
-    setNotes(prev => {
-      const updated = { ...prev, [section]: value };
-      return updated;
-    });
+    setNotes(prev => ({ ...prev, [section]: value }));
     setAutoSaveStatus('Editing...');
   };
 
+  // ... (rest of the component remains the same)
   const getSectionPlaceholder = (section) => {
     switch (section) {
       case 'subjective':
@@ -81,7 +82,6 @@ const NotesPanel = ({ caseInfo, isDisabled, onNoteUpdate }) => {
     }
   };
 
-  // Helper function to count the total number of words across all sections
   const countTotalWords = () => {
     const allText = Object.values(notes).join(' ');
     return allText.split(/\s+/).filter(word => word.trim().length > 0).length;
@@ -166,5 +166,4 @@ const NotesPanel = ({ caseInfo, isDisabled, onNoteUpdate }) => {
     </div>
   );
 };
-
 export default NotesPanel;

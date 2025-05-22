@@ -1,34 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './InactivityReminder.css';
 
 const InactivityReminder = ({ inactivityThreshold = 120 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  let inactivityTimer = null;
+  const inactivityTimerRef = useRef(null); // Use useRef for the timer ID
 
-  const resetTimer = () => {
-    if (inactivityTimer) {
-      clearTimeout(inactivityTimer);
+  // Memoize resetTimer because it's a dependency of useEffect and dismissReminder
+  // It depends on inactivityThreshold, so that should be in its dependency array.
+  const resetTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
     }
 
-    inactivityTimer = setTimeout(() => {
+    inactivityTimerRef.current = setTimeout(() => {
       setIsVisible(true);
     }, inactivityThreshold * 1000); // Convert to milliseconds
-  };
+  }, [inactivityThreshold]);
 
-  const dismissReminder = () => {
+  // Memoize dismissReminder because it's used as an event handler
+  // It depends on resetTimer.
+  const dismissReminder = useCallback(() => {
     setIsVisible(false);
     resetTimer();
-  };
+  }, [resetTimer]);
 
   useEffect(() => {
     // Set up event listeners for user activity
     const activityEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
 
     const handleUserActivity = () => {
+      // isVisible is read here, so it should be a dependency
       if (isVisible) {
-        setIsVisible(false);
+        setIsVisible(false); // Directly set state, no need for isVisible as dependency for this line
       }
-      resetTimer();
+      resetTimer(); // resetTimer is memoized and included as a dependency
     };
 
     // Add event listeners
@@ -41,15 +46,15 @@ const InactivityReminder = ({ inactivityThreshold = 120 }) => {
 
     // Clean up
     return () => {
-      if (inactivityTimer) {
-        clearTimeout(inactivityTimer);
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
       }
 
       activityEvents.forEach(event => {
         window.removeEventListener(event, handleUserActivity);
       });
     };
-  }, [isVisible, inactivityThreshold]);
+  }, [isVisible, resetTimer]); // resetTimer is stable due to useCallback, isVisible triggers re-evaluation if it changes.
 
   if (!isVisible) {
     return null;
