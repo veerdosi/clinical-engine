@@ -108,7 +108,12 @@ class APIRoutes:
         @login_required
         def get_evaluation_history():
             try:
-                from .db import mongo
+                from flask import current_app
+                if not hasattr(current_app, 'mongo') or current_app.mongo is None:
+                    logger.error("MongoDB connection not available")
+                    return jsonify({"error": "Database connection not available"}), 503
+
+                mongo = current_app.mongo
                 user = g.user
 
                 # Get paginated evaluations for the user
@@ -159,8 +164,14 @@ class APIRoutes:
         @login_required
         def get_evaluation_details(evaluation_id):
             try:
-                from .db import mongo
+                from flask import current_app
                 from bson.objectid import ObjectId
+
+                if not hasattr(current_app, 'mongo') or current_app.mongo is None:
+                    logger.error("MongoDB connection not available")
+                    return jsonify({"error": "Database connection not available"}), 503
+
+                mongo = current_app.mongo
                 user = g.user
 
                 # Query for the specific evaluation
@@ -189,7 +200,13 @@ class APIRoutes:
         @login_required
         def get_session_history():
             try:
-                from .db import mongo
+                from flask import current_app
+
+                if not hasattr(current_app, 'mongo') or current_app.mongo is None:
+                    logger.error("MongoDB connection not available")
+                    return jsonify({"error": "Database connection not available"}), 503
+
+                mongo = current_app.mongo
                 user = g.user
 
                 # Get paginated sessions for the user
@@ -242,7 +259,13 @@ class APIRoutes:
         @login_required
         def get_session_evaluations(case_id):
             try:
-                from .db import mongo
+                from flask import current_app
+
+                if not hasattr(current_app, 'mongo') or current_app.mongo is None:
+                    logger.error("MongoDB connection not available")
+                    return jsonify({"error": "Database connection not available"}), 503
+
+                mongo = current_app.mongo
                 user = g.user
 
                 # Query MongoDB evaluations collection for evaluations related to this case
@@ -430,35 +453,40 @@ class APIRoutes:
 
                 # Store evaluation in MongoDB if user is authenticated
                 if hasattr(g, 'user') and g.user:
-                    from .db import mongo
-                    current_case = self.case_manager.get_current_case()
-                    evaluation_data = {
-                        "user_id": g.user.user_id,
-                        "case_id": current_case.get("id", "unknown"),
-                        "case_info": {
-                            "name": current_case.get("name", ""),
-                            "age": current_case.get("age", ""),
-                            "gender": current_case.get("gender", ""),
-                            "specialty": current_case.get("specialty", ""),
-                            "difficulty": current_case.get("difficulty", ""),
-                            "diagnosis": current_case.get("diagnosis", ""),
-                            "presenting_complaint": current_case.get("presenting_complaint", "")
-                        },
-                        "student_diagnosis": student_diagnosis,
-                        "evaluation_result": evaluation_result,
-                        "timestamp": datetime.now(),
-                        "session_data": {
-                            "ordered_tests": list(self.session_manager.get_ordered_tests()),
-                            "ordered_imaging": list(self.session_manager.get_ordered_imaging()),
-                            "notes": notes,
-                            "timeline": timeline,
-                            "efficiency_metrics": efficiency_metrics
-                        }
-                    }
+                    from flask import current_app
 
-                    # Save to MongoDB evaluations collection
-                    mongo.db.evaluations.insert_one(evaluation_data)
-                    logger.info(f"Evaluation stored for user {g.user.user_id} and case {current_case.get('id', 'unknown')}")
+                    if not hasattr(current_app, 'mongo') or current_app.mongo is None:
+                        logger.warning("MongoDB connection not available - evaluation not stored")
+                    else:
+                        mongo = current_app.mongo
+                        current_case = self.case_manager.get_current_case()
+                        evaluation_data = {
+                            "user_id": g.user.user_id,
+                            "case_id": current_case.get("id", "unknown"),
+                            "case_info": {
+                                "name": current_case.get("name", ""),
+                                "age": current_case.get("age", ""),
+                                "gender": current_case.get("gender", ""),
+                                "specialty": current_case.get("specialty", ""),
+                                "difficulty": current_case.get("difficulty", ""),
+                                "diagnosis": current_case.get("diagnosis", ""),
+                                "presenting_complaint": current_case.get("presenting_complaint", "")
+                            },
+                            "student_diagnosis": student_diagnosis,
+                            "evaluation_result": evaluation_result,
+                            "timestamp": datetime.now(),
+                            "session_data": {
+                                "ordered_tests": list(self.session_manager.get_ordered_tests()),
+                                "ordered_imaging": list(self.session_manager.get_ordered_imaging()),
+                                "notes": notes,
+                                "timeline": timeline,
+                                "efficiency_metrics": efficiency_metrics
+                            }
+                        }
+
+                        # Save to MongoDB evaluations collection
+                        mongo.db.evaluations.insert_one(evaluation_data)
+                        logger.info(f"Evaluation stored for user {g.user.user_id} and case {current_case.get('id', 'unknown')}")
 
                 return jsonify(evaluation_result)
             except Exception as e:

@@ -49,11 +49,23 @@ class SessionManager:
             if not hasattr(self, 'user_id') or not self.user_id or not self.case_id:
                 return False
 
-            # Import mongo from db.py
+            # Import current_app from Flask
             try:
-                from .db import mongo
-            except ImportError:
-                logger.warning("MongoDB not available, session not saved to database")
+                from flask import current_app
+
+                # Check if we're in an application context
+                if not current_app:
+                    logger.warning("No Flask application context, session not saved to database")
+                    return False
+
+                # Check if MongoDB is available
+                if not hasattr(current_app, 'mongo') or current_app.mongo is None:
+                    logger.warning("MongoDB connection not available, session not saved to database")
+                    return False
+
+                mongo = current_app.mongo
+            except (RuntimeError, ImportError) as e:
+                logger.warning(f"MongoDB not available, session not saved to database: {str(e)}")
                 return False
 
             # Create session document
