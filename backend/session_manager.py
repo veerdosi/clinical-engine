@@ -56,11 +56,23 @@ class SessionManager:
                 logger.warning("MongoDB not available, session not saved to database")
                 return False
 
+            # Determine session status
+            status = 'completed' if self.diagnosis_submission_time else 'in_progress'
+
+            # Calculate time elapsed
+            time_elapsed = None
+            if self.session_start_time:
+                end_time = self.diagnosis_submission_time or datetime.now()
+                time_elapsed = (end_time - self.session_start_time).total_seconds()
+
             # Create session document
             session_data = {
                 "user_id": self.user_id,
                 "case_id": self.case_id,
                 "timestamp": datetime.now(),
+                "status": status,
+                "time_elapsed": time_elapsed,
+                "last_updated_at": datetime.now(),
                 "ordered_tests": list(self.ordered_tests),
                 "ordered_imaging": list(self.ordered_imaging),
                 "physical_exams": self.physical_exams,
@@ -73,6 +85,10 @@ class SessionManager:
                 "activity_timeline": self.activity_timeline,
                 "idle_periods": self.idle_periods
             }
+
+            # Add case data if available (this should be set when case is created)
+            if hasattr(self, 'case_data') and self.case_data:
+                session_data['case_data'] = self.case_data
 
             # Find existing session or create new one
             result = mongo.db.sessions.update_one(
@@ -87,6 +103,14 @@ class SessionManager:
         except Exception as e:
             logger.error(f"Error saving session to MongoDB: {str(e)}")
             return False
+
+    def set_case_data(self, case_data):
+        """Set case data for this session"""
+        self.case_data = case_data
+        # Save updated session data
+        if self.user_id and self.case_id:
+            self._save_session_to_db()
+        logger.info(f"Case data set for session {self.case_id}")
 
     def reset_session(self, case_id=None, user_id=None):
         """
