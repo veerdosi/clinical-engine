@@ -6,6 +6,9 @@ from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Global mongo instance
+mongo = None
+
 def init_db(app):
     """
     Initialize MongoDB connection
@@ -16,6 +19,8 @@ def init_db(app):
     Returns:
         PyMongo instance or None if connection fails
     """
+    global mongo
+
     # Get MongoDB URI from environment variable or use default for local development
     mongodb_uri = os.getenv("MONGODB_URI")
 
@@ -29,6 +34,7 @@ def init_db(app):
         # Test connection
         if not mongo.db:
             logger.error("mongo.db is None — check MONGODB_URI and MongoDB status")
+            mongo = None
             return None
 
         mongo.db.command('ping')
@@ -42,6 +48,7 @@ def init_db(app):
 
     except (ConnectionFailure, ServerSelectionTimeoutError) as e:
         logger.error(f"Failed to connect to MongoDB: {str(e)}")
+        mongo = None
         return None
 
 def create_indices(mongo):
