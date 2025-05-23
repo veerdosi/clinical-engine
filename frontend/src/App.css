@@ -1,3 +1,106 @@
+/* Tab navigation styles for NavLink */
+.tab-navigation .tab-button {
+  background: none;
+  border: none;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.tab-navigation .tab-button:hover {
+  color: #374151;
+  background-color: #f9fafb;
+}
+
+.tab-navigation .tab-button.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+/* Ensure tab navigation container works properly with routing */
+.tab-navigation {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+}
+
+/* Add global header styles */
+.global-header {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.global-header .header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.global-header .logo-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.global-header .logo-img {
+  height: 2rem;
+  width: 2rem;
+}
+
+.global-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.global-header .user-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.global-header .user-avatar {
+  height: 2rem;
+  width: 2rem;
+  border-radius: 50%;
+}
+
+.global-header .user-name {
+  font-weight: 500;
+  color: #374151;
+}
+
+.global-header .logout-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.global-header .logout-btn:hover {
+  background: #dc2626;
+}
+
 .App {
   text-align: center;
   display: flex;

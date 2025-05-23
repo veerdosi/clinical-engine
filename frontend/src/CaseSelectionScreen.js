@@ -1,12 +1,15 @@
 // src/CaseSelectionScreen.js
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './CaseSelectionScreen.css';
 
-const CaseSelectionScreen = ({ onCaseGenerated, onBackToDashboard }) => {
+const CaseSelectionScreen = () => {
   const [specialty, setSpecialty] = useState('');
   const [difficulty, setDifficulty] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const navigate = useNavigate();
 
   // These should match the options in the backend CaseManager.specialties and CaseManager.difficulties
   const specialties = [
@@ -64,13 +67,20 @@ const CaseSelectionScreen = ({ onCaseGenerated, onBackToDashboard }) => {
       }
 
       const caseData = await response.json();
-      onCaseGenerated(caseData);
+
+      // Navigate to the case view after successful case generation
+      navigate('/case/patient');
+
     } catch (err) {
       console.error('Error generating case:', err);
       setError('Unable to generate case. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleBackToDashboard = () => {
+    navigate('/dashboard');
   };
 
   return (
@@ -119,15 +129,13 @@ const CaseSelectionScreen = ({ onCaseGenerated, onBackToDashboard }) => {
             {isLoading ? 'Generating...' : 'Generate Case'}
           </button>
 
-          {onBackToDashboard && (
-            <button
-              className="back-btn"
-              onClick={onBackToDashboard}
-              disabled={isLoading}
-            >
-              Back to Dashboard
-            </button>
-          )}
+          <button
+            className="back-btn"
+            onClick={handleBackToDashboard}
+            disabled={isLoading}
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     </div>

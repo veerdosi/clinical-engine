@@ -290,6 +290,27 @@ export const getDashboardData = async () => {
   }
 };
 
+// Resume case
+export const resumeCase = async (caseId) => {
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/resume-case/${caseId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to resume case: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error resuming case:", error);
+    throw error;
+  }
+};
+
 // Test authentication
 export const testAuth = async () => {
   try {
@@ -320,5 +341,26 @@ export const testAuth = async () => {
   } catch (error) {
     console.error("Error testing authentication:", error);
     return { authenticated: false, error: error.message };
+  }
+};
+
+// Resume case
+export const resumeCase = async (caseId) => {
+  try {
+    const response = await authFetch(`${API_BASE_URL}/api/resume-case/${caseId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to resume case: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error resuming case:", error);
+    throw error;
   }
 };

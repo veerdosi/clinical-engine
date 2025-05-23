@@ -78,8 +78,8 @@ def create_app():
         )
 
         # Register routes
-        blueprint = api_routes.register_routes(api_bp)
-        app.register_blueprint(blueprint)
+        api_routes.register_routes(api_bp)
+        app.register_blueprint(api_bp)
 
         logger.info("Application initialization complete!")
 
@@ -90,4 +90,7 @@ def create_app():
 
     return app
 
-app = create_app()
+if __name__ == '__main__':
+    app = create_app()
+    logger.info("Starting Flask server...")
+    app.run(debug=True, host="127.0.0.1", port=5000)

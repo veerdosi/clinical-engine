@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { getUserEvaluations, getUserSessions, getDashboardData } from './api';
+import { useNavigate } from 'react-router-dom';
+import { getUserEvaluations, getUserSessions, getDashboardData, resumeCase } from './api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar, Clock, ArrowUpRight, ChevronRight, User, Book, FileText, Activity, HelpCircle, LogOut, ChevronDown, Award } from 'lucide-react'; // Added Award icon
 import './StudentDashboard.css';
@@ -24,7 +25,7 @@ const AvatarDropdown = ({ anchorRef, isOpen, onClose, children }) => {
   );
 };
 
-const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
+const StudentDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -39,6 +40,8 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [performanceData, setPerformanceData] = useState([]);
   const dropdownRef = useRef(null);
+
+  const navigate = useNavigate();
 
   const generateLearningResources = useCallback(() => {
     const upcomingModules = [
@@ -208,21 +211,21 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
               getUserEvaluations().catch(e => { console.error("Failed to get evaluations:", e); return null; }),
               getUserSessions().catch(e => { console.error("Failed to get sessions:", e); return null; })
             ]);
-    
+
             if (evaluationsResponse && evaluationsResponse.evaluations) {
               processEvaluationsData(evaluationsResponse.evaluations);
             } else if (!combinedDataUsed) { // only if not already set by combined data
               setStats(prev => ({ ...prev, completedCases: 0, accuracyRate: 0 }));
               setSpecialtyPerformance([]);
             }
-    
+
             if (sessionsResponse && sessionsResponse.sessions) {
               processSessionsData(sessionsResponse.sessions);
             } else if (!combinedDataUsed) {
                 setStats(prev => ({ ...prev, totalCases: prev.completedCases }));
             }
         }
-        
+
         generateLearningResources();
         setLoading(false);
       } catch (err) {
@@ -235,10 +238,10 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     fetchDashboardData();
     generateSamplePerformanceData();
   }, [
-    processFullDashboardData, 
-    processEvaluationsData, 
-    processSessionsData, 
-    generateLearningResources, 
+    processFullDashboardData,
+    processEvaluationsData,
+    processSessionsData,
+    generateLearningResources,
     generateSamplePerformanceData,
     specialtyPerformance.length // Added to re-evaluate if specialtyPerformance was not set by combined endpoint
   ]);
@@ -255,18 +258,29 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
     };
   }, []);
 
-  const handleResumeCase = (caseId) => {
-    if (onResumeCaseClick) {
-      onResumeCaseClick(caseId);
+  const handleResumeCase = async (caseId) => {
+    try {
+      console.log(`Attempting to resume case: ${caseId}`);
+      const response = await resumeCase(caseId);
+
+      if (response.success) {
+        console.log('Case resumed successfully:', response);
+        // Navigate to case view with case ID
+        navigate(`/case/${caseId}/patient`);
+      } else {
+        console.error('Failed to resume case:', response);
+        alert('Failed to resume case. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error resuming case:', error);
+      alert('Error resuming case. Please try again.');
     }
   };
 
   const handleStartNewCase = () => {
     console.log("StudentDashboard: handleStartNewCase called");
-    if (onStartNewCase) {
-      console.log("StudentDashboard: Calling onStartNewCase prop");
-      onStartNewCase();
-    }
+    // Navigate to case selection screen
+    navigate('/case-selection');
   };
 
   const toggleDropdown = () => {
@@ -520,7 +534,7 @@ const StudentDashboard = ({ onStartNewCase, onResumeCaseClick, user }) => {
                 </div>
               </div>
             </div>
-            
+
             {/* Specialty Performance - NEW CARD */}
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="p-6 border-b border-gray-200">
