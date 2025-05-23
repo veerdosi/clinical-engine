@@ -2,7 +2,6 @@ import datetime
 import logging
 import jwt
 from flask import current_app
-from .db import mongo
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -23,6 +22,7 @@ class User:
     @staticmethod
     def find_by_email(email):
         """Find a user by email address"""
+        mongo = current_app.mongo
         if not email:
             return None
 
@@ -43,6 +43,7 @@ class User:
     @staticmethod
     def find_by_id(user_id):
         """Find a user by MongoDB ID"""
+        mongo = current_app.mongo
         if not user_id:
             return None
 
@@ -68,6 +69,7 @@ class User:
     @staticmethod
     def create_or_update_from_google_data(google_data):
         """Create or update a user from Google OAuth data"""
+        mongo = current_app.mongo
         email = google_data.get('email')
         if not email:
             logger.error("No email provided in Google data")

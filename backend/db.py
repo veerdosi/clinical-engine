@@ -6,9 +6,6 @@ from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# MongoDB instance
-mongo = PyMongo()
-
 def init_db(app):
     """
     Initialize MongoDB connection
@@ -20,22 +17,26 @@ def init_db(app):
         PyMongo instance or None if connection fails
     """
     # Get MongoDB URI from environment variable or use default for local development
-    mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017/clinical_engine")
+    mongodb_uri = os.getenv("MONGODB_URI")
 
     # Configure Flask app for MongoDB
     app.config["MONGO_URI"] = mongodb_uri
 
     try:
-        # Initialize PyMongo with the app
-        mongo.init_app(app)
+        # Initialize new PyMongo instance with the app
+        mongo = PyMongo(app)
 
         # Test connection
+        if not mongo.db:
+            logger.error("mongo.db is None — check MONGODB_URI and MongoDB status")
+            return None
+
         mongo.db.command('ping')
 
         logger.info("MongoDB connection established successfully")
 
         # Create indices for better query performance
-        create_indices()
+        create_indices(mongo)
 
         return mongo
 
@@ -43,7 +44,7 @@ def init_db(app):
         logger.error(f"Failed to connect to MongoDB: {str(e)}")
         return None
 
-def create_indices():
+def create_indices(mongo):
     """Create indices for collections for better query performance"""
     try:
         # Create index on users collection

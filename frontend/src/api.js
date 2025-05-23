@@ -1,4 +1,3 @@
-// api.js
 import { getToken, authFetch } from './auth';
 
 // Base API URL configuration

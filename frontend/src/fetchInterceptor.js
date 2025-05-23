@@ -1,4 +1,3 @@
-// fetchInterceptor.js
 // A utility to automatically add authentication headers to all fetch requests
 
 // Store the original fetch function

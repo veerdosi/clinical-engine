@@ -42,6 +42,7 @@ def create_app():
         # Initialize MongoDB database
         logger.info("Initializing MongoDB connection...")
         mongo = init_db(app)
+        app.mongo = mongo
         if not mongo:
             logger.warning("MongoDB connection failed. Some features may not work correctly.")
 
