@@ -32,7 +32,7 @@ def init_db(app):
         mongo = PyMongo(app)
 
         # Test connection
-        if not mongo.db:
+        if mongo.db is None:
             logger.error("mongo.db is None — check MONGODB_URI and MongoDB status")
             mongo = None
             return None
