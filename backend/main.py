@@ -89,7 +89,4 @@ def create_app():
 
     return app
 
-if __name__ == '__main__':
-    app = create_app()
-    logger.info("Starting Flask server...")
-    app.run(debug=True, host="127.0.0.1", port=5000)
+app = create_app()
