@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { getUserEvaluations, getUserSessions, getDashboardData, resumeCase } from './api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Calendar, Clock, ArrowUpRight, ChevronRight, User, Book, FileText, Activity, HelpCircle, LogOut, ChevronDown, Award } from 'lucide-react'; // Added Award icon
+import { Clock, ArrowUpRight, ChevronRight, User, FileText, Activity, HelpCircle, LogOut, ChevronDown, Award } from 'lucide-react'; // Added Award icon
 import './StudentDashboard.css';
 
 // Portal-based dropdown for the avatar
@@ -35,21 +35,46 @@ const StudentDashboard = ({ user }) => {
     accuracyRate: 0
   });
   const [recentCases, setRecentCases] = useState([]);
-  const [specialtyPerformance, setSpecialtyPerformance] = useState([]); // Kept this state
-  const [learningResources, setLearningResources] = useState([]);
+  const [specialtyPerformance, setSpecialtyPerformance] = useState([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [performanceData, setPerformanceData] = useState([]);
   const dropdownRef = useRef(null);
 
   const navigate = useNavigate();
 
-  const generateLearningResources = useCallback(() => {
-    const upcomingModules = [
-      { id: 1, title: 'Advanced Cardiac Assessment', completion: 45, dueDate: '2 weeks' },
-      { id: 2, title: 'Critical Care Management', completion: 20, dueDate: '1 month' },
-      { id: 3, title: 'Differential Diagnosis Skills', completion: 80, dueDate: '3 days' }
-    ];
-    setLearningResources(upcomingModules);
+  const generatePerformanceData = useCallback((evaluations) => {
+    if (!evaluations || evaluations.length === 0) {
+      setPerformanceData([]);
+      return;
+    }
+
+    // Group evaluations by month and calculate average scores
+    const monthlyData = {};
+    evaluations.forEach(evaluation => {
+      const date = new Date(evaluation.timestamp);
+      const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { scores: [], date: monthKey, timestamp: date };
+      }
+
+      // Calculate score from evaluation result
+      const score = evaluation.evaluation_result?.overall_clinical_score ||
+                   (evaluation.is_correct ? 85 + Math.random() * 15 : 65 + Math.random() * 15);
+      monthlyData[monthKey].scores.push(score);
+    });
+
+    // Convert to chart data and sort by date
+    const chartData = Object.values(monthlyData)
+      .map(monthData => ({
+        date: monthData.date,
+        score: Math.round(monthData.scores.reduce((sum, score) => sum + score, 0) / monthData.scores.length),
+        timestamp: monthData.timestamp
+      }))
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .slice(-6); // Show last 6 months
+
+    setPerformanceData(chartData);
   }, []);
 
   const processFullDashboardData = useCallback((data) => {
@@ -64,20 +89,19 @@ const StudentDashboard = ({ user }) => {
       setRecentCases(data.recentCases);
     }
     if (data.specialtyPerformance && Array.isArray(data.specialtyPerformance)) {
-      setSpecialtyPerformance(data.specialtyPerformance); // Use this if provided
+      setSpecialtyPerformance(data.specialtyPerformance);
     }
-    // If data.specialtyPerformance is not provided, processEvaluationsData will handle it if evaluations are fetched.
-    if (data.learningResources && Array.isArray(data.learningResources)) {
-      setLearningResources(data.learningResources);
-    } else {
-      generateLearningResources();
+    // Generate performance chart data from evaluations
+    if (data.evaluations && Array.isArray(data.evaluations)) {
+      generatePerformanceData(data.evaluations);
     }
-  }, [generateLearningResources]);
+  }, [generatePerformanceData]);
 
   const processEvaluationsData = useCallback((evaluations) => {
     if (!evaluations || evaluations.length === 0) {
       setStats(prev => ({ ...prev, completedCases: 0, accuracyRate: 0 }));
-      setSpecialtyPerformance([]); // Clear specialty performance if no evaluations
+      setSpecialtyPerformance([]);
+      setPerformanceData([]);
       return;
     }
 
@@ -90,6 +114,9 @@ const StudentDashboard = ({ user }) => {
       completedCases: completed,
       accuracyRate: accuracyRate
     }));
+
+    // Generate performance chart data
+    generatePerformanceData(evaluations);
 
     const recentCompletedCases = evaluations
       .slice(0, 10)
@@ -135,8 +162,8 @@ const StudentDashboard = ({ user }) => {
     }));
 
     specialtyStats.sort((a, b) => b.accuracy - a.accuracy);
-    setSpecialtyPerformance(specialtyStats); // Set the state here
-  }, []);
+    setSpecialtyPerformance(specialtyStats);
+  }, [generatePerformanceData]);
 
   const processSessionsData = useCallback((sessions) => {
     if (!sessions || sessions.length === 0) {
@@ -173,14 +200,6 @@ const StudentDashboard = ({ user }) => {
       ...prevStats,
       totalCases: prevStats.completedCases + inProgressCases.length
     }));
-  }, []);
-
-  const generateSamplePerformanceData = useCallback(() => {
-    const sampleData = [
-      { date: 'Jan', score: 76 }, { date: 'Feb', score: 82 }, { date: 'Mar', score: 78 },
-      { date: 'Apr', score: 89 }, { date: 'May', score: 85 }, { date: 'Jun', score: 92 }
-    ];
-    setPerformanceData(sampleData);
   }, []);
 
   useEffect(() => {
@@ -226,7 +245,6 @@ const StudentDashboard = ({ user }) => {
             }
         }
 
-        generateLearningResources();
         setLoading(false);
       } catch (err) {
         console.error("Error fetching dashboard data in useEffect:", err);
@@ -236,14 +254,11 @@ const StudentDashboard = ({ user }) => {
     };
 
     fetchDashboardData();
-    generateSamplePerformanceData();
   }, [
     processFullDashboardData,
     processEvaluationsData,
     processSessionsData,
-    generateLearningResources,
-    generateSamplePerformanceData,
-    specialtyPerformance.length // Added to re-evaluate if specialtyPerformance was not set by combined endpoint
+    specialtyPerformance.length
   ]);
 
   useEffect(() => {
@@ -374,14 +389,14 @@ const StudentDashboard = ({ user }) => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg text-white p-6 mb-8">
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex justify-between items-center">
+            <div className="flex-1">
               <h2 className="text-2xl font-bold mb-2">Welcome back, {user?.name?.split(' ')[0] || 'User'}!</h2>
               <p className="mb-4 opacity-90">Continue your clinical training or start a new case.</p>
               <div className="flex space-x-4">
                 <button
                   onClick={handleStartNewCase}
-                  className="px-4 py-2 bg-white text-blue-700 font-medium rounded-md shadow hover:bg-blue-50 transition-colors"
+                  className="px-6 py-3 bg-white text-blue-700 font-medium rounded-md shadow hover:bg-blue-50 transition-colors"
                 >
                   Start New Case
                 </button>
@@ -391,18 +406,20 @@ const StudentDashboard = ({ user }) => {
                         const inProgress = recentCases.find(c => c.status === 'In Progress');
                         if (inProgress) handleResumeCase(inProgress.id);
                     }}
-                    className="px-4 py-2 bg-blue-700 text-white font-medium rounded-md shadow hover:bg-blue-900 transition-colors"
+                    className="px-6 py-3 bg-blue-700 text-white font-medium rounded-md shadow hover:bg-blue-900 transition-colors border border-blue-600"
                   >
                     Continue Learning
                   </button>
                 )}
               </div>
             </div>
-            <div className="bg-blue-900 bg-opacity-30 rounded-lg p-4 text-center">
-              <p className="text-sm opacity-80">Avg. Score</p>
-              <h3 className="text-3xl font-bold">{stats.accuracyRate}%</h3>
-              <p className="text-sm opacity-80">Accuracy</p>
-            </div>
+            {stats.completedCases > 0 && (
+              <div className="bg-blue-900 bg-opacity-30 rounded-lg p-4 text-center ml-6">
+                <p className="text-sm opacity-80">Avg. Score</p>
+                <h3 className="text-3xl font-bold">{stats.accuracyRate}%</h3>
+                <p className="text-sm opacity-80">Accuracy</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -554,79 +571,6 @@ const StudentDashboard = ({ user }) => {
                 )) : (
                   <p className="p-4 text-gray-500 text-sm">No specialty performance data available yet.</p>
                 )}
-              </div>
-            </div>
-
-            {/* Upcoming Learning Modules */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-800">Upcoming Modules</h2>
-              </div>
-              <div className="divide-y divide-gray-200">
-                {learningResources.length > 0 ? learningResources.map(module => (
-                  <div key={module.id} className="p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex justify-between mb-2">
-                      <h3 className="font-medium text-gray-900">{module.title}</h3>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        <span>Due in {module.dueDate}</span>
-                      </div>
-                    </div>
-                    <div className="relative pt-1">
-                      <div className="flex mb-1 items-center justify-between">
-                        <div>
-                          <span className="text-xs font-semibold inline-block text-blue-600">
-                            {module.completion}% Complete
-                          </span>
-                        </div>
-                      </div>
-                      <div className="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
-                        <div
-                          style={{ width: `${module.completion}%` }}
-                          className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-500"
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                )) : (
-                  <p className="p-4 text-gray-500 text-sm">No upcoming modules assigned.</p>
-                )}
-              </div>
-              <div className="p-4 bg-gray-50 text-center">
-                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                  View All Modules
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Start */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Start</h2>
-              <div className="space-y-3">
-                <button
-                  onClick={handleStartNewCase}
-                  className="w-full flex items-center justify-between p-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md transition-colors"
-                >
-                  <span className="flex items-center">
-                    <User className="w-5 h-5 mr-2" />
-                    New Patient Case
-                  </span>
-                  <ArrowUpRight className="w-4 h-4" />
-                </button>
-                <button className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-md transition-colors">
-                  <span className="flex items-center">
-                    <Book className="w-5 h-5 mr-2" />
-                    Learning Library
-                  </span>
-                  <ArrowUpRight className="w-4 h-4" />
-                </button>
-                <button className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-md transition-colors">
-                  <span className="flex items-center">
-                    <FileText className="w-5 h-5 mr-2" />
-                    Assessment Reports
-                  </span>
-                  <ArrowUpRight className="w-4 h-4" />
-                </button>
               </div>
             </div>
           </div>

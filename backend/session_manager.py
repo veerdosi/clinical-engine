@@ -42,6 +42,13 @@ class SessionManager:
         logger.info(f"Session associated with user {user_id}")
         return True
 
+    def set_case_data(self, case_data):
+        """Set case data for this session and save to database"""
+        self.case_data = case_data
+        self._save_session_to_db()
+        logger.info(f"Case data set for case {self.case_id}")
+        return True
+
     def _save_session_to_db(self):
         """Save the current session state to MongoDB"""
         try:
@@ -83,8 +90,14 @@ class SessionManager:
                 "last_activity_time": self.last_activity_time,
                 "diagnosis_submission_time": self.diagnosis_submission_time,
                 "activity_timeline": self.activity_timeline,
-                "idle_periods": self.idle_periods
+                "idle_periods": self.idle_periods,
+                "status": "in_progress",
+                "last_updated_at": datetime.now()
             }
+
+            # Include case_data if it exists
+            if hasattr(self, 'case_data') and self.case_data:
+                session_data["case_data"] = self.case_data
 
             # Find existing session or create new one
             result = mongo.db.sessions.update_one(

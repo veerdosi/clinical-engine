@@ -79,29 +79,7 @@ function App() {
           <Routes>
             {/* Dashboard - default route */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={
-              <div>
-                {/* Global header with user info */}
-                <header className="global-header">
-                  <div className="header-content">
-                    <div className="logo-section">
-                      <img src="/logo.svg" alt="Clinical Engine Logo" className="logo-img" />
-                      <h1>Clinical Engine</h1>
-                    </div>
-                    {user && (
-                      <div className="user-profile">
-                        {user.picture && <img src={user.picture} alt={user.name} className="user-avatar" />}
-                        <span className="user-name">{user.name}</span>
-                        <button className="logout-btn" onClick={handleLogout}>
-                          Logout
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </header>
-                <StudentDashboard user={user} />
-              </div>
-            } />
+            <Route path="/dashboard" element={<StudentDashboard user={user} />} />
 
             {/* Case selection screen */}
             <Route path="/case-selection" element={
