@@ -159,17 +159,16 @@ function CaseView() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
-      {/* Modern Header matching StudentDashboard */}
       <header className="bg-white/90 backdrop-blur-lg border-b border-slate-200/60 sticky top-0 z-50 shadow-sm">
-        <div className="w-full px-4 lg:px-6 py-4">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-                <img src="/logo.svg" alt="Clinical Engine Logo" className="w-7 h-7 text-white" />
+                <img src="/logo.png" alt="Clinical Engine Logo" className="w-7 h-7 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-slate-900">Clinical Engine</h1>
-                <p className="text-sm text-slate-600 font-medium">Medical Training Platform</p>
+                <h2 className="text-sm text-slate-600 font-medium">AI-powered medical simulation tool for clinical decision-making and diagnostic reasoning</h2>
               </div>
             </div>
 
@@ -231,7 +230,7 @@ function CaseView() {
         </div>
 
         {/* Modern Tab Navigation */}
-        <div className="w-full px-4 lg:px-6">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6">
           <div className="flex overflow-x-auto space-x-1 bg-slate-100/70 backdrop-blur-sm rounded-2xl p-2 mt-4 scrollbar-hide">
             <NavLink
               to={caseId ? `/case/${caseId}/patient` : '/case/patient'}
@@ -283,15 +282,14 @@ function CaseView() {
 
       <main className="w-full px-4 lg:px-6 py-8">
         <Routes>
-          {/* Default redirect to patient tab */}
           <Route path="/" element={<Navigate to="patient" replace />} />
 
           {/* Patient interaction tab */}
           <Route path="/patient" element={
             <div className="patient-tab">
-              <div className="vital-signs-container">
-                <VitalSigns vitals={caseInfo?.vitals || {}} />
-              </div>
+                <div className="vital-signs-container">
+                    <VitalSigns vitals={caseInfo?.vitals || {}} />
+                </div>
               {caseInfo && !isDiagnosisSubmitted && (
                 <InactivityReminder inactivityThreshold={getInactivityThreshold()} />
               )}
@@ -313,8 +311,9 @@ function CaseView() {
                     </div>
                   </div>
                 </div>
-                <div className="controls-area">
-                  <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden hover:shadow-xl transition-all duration-300 mb-6">
+                <div className="controls-area overflow-y-auto max-h-screen pr-4">
+                  {/* Physical Exam Panel Card - Removed overflow-hidden */}
+                  <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300 mb-6">
                     <div className="p-6 border-b border-slate-200/60">
                       <h2 className="text-xl font-bold text-slate-900 mb-1">Physical Examination</h2>
                       <p className="text-slate-600 text-sm">Perform systematic examination</p>
@@ -323,7 +322,8 @@ function CaseView() {
                       <PhysicalExamPanel isDisabled={isDiagnosisSubmitted} caseInfo={caseInfo} />
                     </div>
                   </div>
-                  <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden hover:shadow-xl transition-all duration-300">
+                  {/* Diagnosis Panel Card - Removed overflow-hidden */}
+                  <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
                     <div className="p-6 border-b border-slate-200/60">
                       <h2 className="text-xl font-bold text-slate-900 mb-1">Diagnosis & Assessment</h2>
                       <p className="text-slate-600 text-sm">Submit your clinical diagnosis</p>

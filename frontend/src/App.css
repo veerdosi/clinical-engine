@@ -885,7 +885,8 @@ select:focus {
 
 /* Vital signs container styling - Full Width */
 .vital-signs-container {
-  margin: var(--space-4) 0;
+  margin: var(--space-4) auto;
+  max-width: 1500px;
   width: 100%;
   padding: 0 var(--space-6);
 }

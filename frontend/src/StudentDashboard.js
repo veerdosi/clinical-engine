@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { getUserEvaluations, getUserSessions, getDashboardData, resumeCase } from './api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Clock, ArrowUpRight, ChevronRight, User, FileText, Activity, HelpCircle, LogOut, ChevronDown, Award } from 'lucide-react'; // Added Award icon
+import { Clock, ArrowUpRight, ChevronRight, User, FileText, Activity, HelpCircle, LogOut, ChevronDown, Award } from 'lucide-react'; 
 import './StudentDashboard.css';
 
 // Portal-based dropdown for the avatar
@@ -376,21 +376,21 @@ const StudentDashboard = ({ user }) => {
             </div>
             <AvatarDropdown anchorRef={dropdownRef} isOpen={isDropdownOpen} onClose={() => setIsDropdownOpen(false)}>
               <button
-                onClick={() => { /* TODO: Implement Help Center navigation */ }}
+                onClick={() => {  }}
                 className="flex items-center px-5 py-4 text-base text-slate-700 hover:bg-blue-50 hover:text-blue-700 w-full text-left transition-all duration-200 group first:rounded-t-lg"
               >
                 <HelpCircle className="w-5 h-5 mr-4 text-slate-400 group-hover:text-blue-500 transition-colors duration-200" />
                 Help Center
               </button>
               <button
-                onClick={() => { /* TODO: Implement Profile navigation */ }}
+                onClick={() => { }}
                 className="flex items-center px-5 py-4 text-base text-slate-700 hover:bg-blue-50 hover:text-blue-700 w-full text-left transition-all duration-200 group"
               >
                 <User className="w-5 h-5 mr-4 text-slate-400 group-hover:text-blue-500 transition-colors duration-200" />
                 Profile Settings
               </button>
               <button
-                onClick={() => { /* TODO: Implement Logout */ }}
+                onClick={() => { }}
                 className="flex items-center px-5 py-4 text-base text-slate-700 hover:bg-red-50 hover:text-red-700 w-full text-left transition-all duration-200 group last:rounded-b-lg"
               >
                 <LogOut className="w-5 h-5 mr-4 text-slate-400 group-hover:text-red-500 transition-colors duration-200" />

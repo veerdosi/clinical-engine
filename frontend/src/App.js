@@ -87,7 +87,7 @@ function App() {
                 <header className="global-header">
                   <div className="header-content">
                     <div className="logo-section">
-                      <img src="/logo.svg" alt="Clinical Engine Logo" className="logo-img" />
+                      <img src="/logo.png" alt="Clinical Engine Logo" className="logo-img" />
                       <h1>Clinical Engine</h1>
                     </div>
                     {user && (

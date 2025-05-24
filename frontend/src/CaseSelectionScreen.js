@@ -1,4 +1,3 @@
-// src/CaseSelectionScreen.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './CaseSelectionScreen.css';
@@ -11,7 +10,6 @@ const CaseSelectionScreen = () => {
 
   const navigate = useNavigate();
 
-  // These should match the options in the backend CaseManager.specialties and CaseManager.difficulties
   const specialties = [
     { value: "random", label: "Feeling Lucky? (Random Specialty)" },
     { value: "Internal Medicine", label: "Internal Medicine" },
