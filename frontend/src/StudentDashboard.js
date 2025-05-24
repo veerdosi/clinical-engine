@@ -339,87 +339,114 @@ const StudentDashboard = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
       {/* Header */}
-      <header className="bg-white shadow">
+      <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100 mr-3">
-              <Activity className="w-6 h-6 text-blue-600" />
+          <div className="flex items-center space-x-3">
+            <div className="w-11 h-11 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-md">
+              <Activity className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Clinical Engine</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Clinical Engine</h1>
+              <p className="text-xs text-slate-500 font-medium">Medical Training Platform</p>
+            </div>
           </div>
 
           <div className="relative inline-block" ref={dropdownRef}>
             <div
               onClick={toggleDropdown}
-              className={`flex items-center space-x-2 cursor-pointer p-2 rounded-md ${isDropdownOpen ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+              className={`flex items-center space-x-3 cursor-pointer px-3 py-2 rounded-xl transition-all duration-200 ${
+                isDropdownOpen
+                  ? 'bg-blue-50 ring-2 ring-blue-200/50 shadow-sm'
+                  : 'hover:bg-slate-50 hover:shadow-sm'
+              }`}
             >
-              <img src={user?.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=random`} alt="User avatar" className="w-8 h-8 rounded-full" />
-              <span className="text-gray-800 font-medium">{user?.name || 'Dr. Jane Smith'}</span>
-              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'transform rotate-180 text-blue-500' : 'text-gray-500'}`} />
+              <img
+                src={user?.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=4f46e5&color=ffffff&bold=true`}
+                alt="User avatar"
+                className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm"
+              />
+              <div className="text-left">
+                <p className="text-sm font-semibold text-slate-800">{user?.name || 'Dr. Jane Smith'}</p>
+                <p className="text-xs text-slate-500">Medical Student</p>
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-all duration-200 ${
+                isDropdownOpen ? 'rotate-180 text-blue-600' : 'text-slate-400'
+              }`} />
             </div>
             <AvatarDropdown anchorRef={dropdownRef} isOpen={isDropdownOpen} onClose={() => setIsDropdownOpen(false)}>
               <button
                 onClick={() => { /* TODO: Implement Help Center navigation */ }}
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
+                className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 w-full text-left transition-colors duration-200 group first:rounded-t-md"
               >
-                <HelpCircle className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
+                <HelpCircle className="w-4 h-4 mr-3 text-slate-400 group-hover:text-blue-500 transition-colors duration-200" />
                 Help Center
               </button>
               <button
                 onClick={() => { /* TODO: Implement Profile navigation */ }}
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
+                className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 w-full text-left transition-colors duration-200 group"
               >
-                <User className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
-                Profile
+                <User className="w-4 h-4 mr-3 text-slate-400 group-hover:text-blue-500 transition-colors duration-200" />
+                Profile Settings
               </button>
               <button
                 onClick={() => { /* TODO: Implement Logout */ }}
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 w-full text-left transition-colors duration-150 group"
+                className="flex items-center px-4 py-3 text-sm text-slate-700 hover:bg-red-50 hover:text-red-700 w-full text-left transition-colors duration-200 group last:rounded-b-md"
               >
-                <LogOut className="w-4 h-4 mr-2 text-gray-500 group-hover:text-blue-500 transition-colors duration-150" />
-                Logout
+                <LogOut className="w-4 h-4 mr-3 text-slate-400 group-hover:text-red-500 transition-colors duration-200" />
+                Sign Out
               </button>
             </AvatarDropdown>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Welcome Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg text-white p-6 mb-8">
-          <div className="flex justify-between items-center">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-2">Welcome back, {user?.name?.split(' ')[0] || 'User'}!</h2>
-              <p className="mb-4 opacity-90">Continue your clinical training or start a new case.</p>
-              <div className="flex space-x-4">
-                <button
-                  onClick={handleStartNewCase}
-                  className="px-6 py-3 bg-white text-blue-700 font-medium rounded-md shadow hover:bg-blue-50 transition-colors"
-                >
-                  Start New Case
-                </button>
-                {recentCases.find(c => c.status === 'In Progress') && (
+        <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl shadow-xl">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-transparent"></div>
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/5 rounded-full blur-xl"></div>
+          <div className="relative p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-6 lg:space-y-0">
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h2 className="text-3xl font-bold text-white mb-2">
+                    Welcome back, {user?.name?.split(' ')[0] || 'User'}! 👋
+                  </h2>
+                  <p className="text-blue-100 text-lg">Continue your clinical journey or explore new cases.</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-4">
                   <button
-                    onClick={() => {
-                        const inProgress = recentCases.find(c => c.status === 'In Progress');
-                        if (inProgress) handleResumeCase(inProgress.id);
-                    }}
-                    className="px-6 py-3 bg-blue-700 text-white font-medium rounded-md shadow hover:bg-blue-900 transition-colors border border-blue-600"
+                    onClick={handleStartNewCase}
+                    className="group relative px-8 py-4 bg-white text-blue-700 font-semibold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center space-x-2"
                   >
-                    Continue Learning
+                    <span>Start New Case</span>
+                    <ArrowUpRight className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
                   </button>
-                )}
+                  {recentCases.find(c => c.status === 'In Progress') && (
+                    <button
+                      onClick={() => {
+                          const inProgress = recentCases.find(c => c.status === 'In Progress');
+                          if (inProgress) handleResumeCase(inProgress.id);
+                      }}
+                      className="px-8 py-4 bg-blue-800/50 backdrop-blur-sm text-white font-semibold rounded-xl border border-blue-400/30 hover:bg-blue-700/60 hover:border-blue-300/50 transition-all duration-200 flex items-center justify-center space-x-2"
+                    >
+                      <span>Continue Learning</span>
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
               </div>
+              {stats.completedCases > 0 && (
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/20">
+                  <p className="text-blue-200 text-sm font-medium mb-1">Overall Performance</p>
+                  <h3 className="text-4xl font-bold text-white mb-1">{stats.accuracyRate}%</h3>
+                  <p className="text-blue-200 text-sm">Average Score</p>
+                </div>
+              )}
             </div>
-            {stats.completedCases > 0 && (
-              <div className="bg-blue-900 bg-opacity-30 rounded-lg p-4 text-center ml-6">
-                <p className="text-sm opacity-80">Avg. Score</p>
-                <h3 className="text-3xl font-bold">{stats.accuracyRate}%</h3>
-                <p className="text-sm opacity-80">Accuracy</p>
-              </div>
-            )}
           </div>
         </div>
 
