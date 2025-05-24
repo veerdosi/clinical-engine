@@ -1,113 +1,401 @@
-/* VitalSigns component styles aligned with design system */
-.vital-signs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-6);
-  background-color: white;
-  border-radius: var(--radius-lg);
-  padding: var(--space-4) var(--space-6);
-  box-shadow: var(--shadow-md);
-  margin-bottom: var(--space-4);
+/* Vital Signs Dashboard - Modern Design matching StudentDashboard */
+.vital-signs-dashboard {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
 }
 
-.vital-sign {
-  display: flex;
-  flex-direction: column;
-  min-width: 100px;
+.vital-signs-dashboard:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.vital-signs-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.vital-signs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Individual Vital Sign Cards */
+.vital-sign-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s ease;
   position: relative;
+  overflow: hidden;
 }
 
-.vital-sign.abnormal .vital-value {
-  color: var(--warning-700);
+.vital-sign-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.vital-sign.critical .vital-value {
-  color: var(--error-700);
+.vital-sign-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
 }
 
-.vital-sign-label {
-  font-size: 0.85rem;
-  color: var(--neutral-600);
-  margin-bottom: var(--space-1);
-  font-weight: 500;
+.vital-sign-card:hover::before {
+  opacity: 1;
+}
+
+.vital-sign-card.abnormal {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, rgba(254, 242, 242, 0.9) 0%, rgba(255, 255, 255, 0.9) 100%);
+}
+
+.vital-sign-card.abnormal::before {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+  opacity: 1;
+}
+
+.vital-sign-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.vital-sign-header h4 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .vital-value {
-  font-family: 'Fira Code', monospace;
+  font-family: 'Fira Code', 'SF Mono', Consolas, monospace;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  text-align: right;
+}
+
+.vital-sign-card.abnormal .vital-value {
+  color: #dc2626;
+}
+
+.vital-visualization {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.8) 100%);
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+/* Heart Rate Monitor */
+.heart-rate-monitor {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);
+  border-radius: 0.75rem;
+}
+
+.heart-rate-monitor canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.75rem;
+}
+
+/* Respiratory Animation */
+.respiratory-visual {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.1) 100%);
+  border-radius: 0.75rem;
+}
+
+.lungs-container {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.lung {
+  width: 24px;
+  height: 32px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  animation: breathe var(--breathing-duration, 3s) ease-in-out infinite;
+}
+
+.left-lung {
+  animation-delay: 0s;
+}
+
+.right-lung {
+  animation-delay: 0.1s;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scaleY(1); opacity: 0.7; }
+  50% { transform: scaleY(1.2); opacity: 1; }
+}
+
+/* Blood Pressure Visualization */
+.bp-visual {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(109, 40, 217, 0.1) 100%);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.bp-gauge {
+  display: flex;
+  gap: 0.75rem;
+  align-items: end;
+  height: 50px;
+  margin-bottom: 0.5rem;
+}
+
+.bp-bar {
+  width: 20px;
+  border-radius: 10px 10px 4px 4px;
+  position: relative;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.bp-bar span {
+  position: absolute;
+  bottom: -20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.bp-labels {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+/* Temperature Thermometer */
+.temperature-visual {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.thermometer {
+  width: 24px;
+  height: 60px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.thermometer-bulb {
+  width: 20px;
+  height: 20px;
+  background: #ef4444;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 0;
+  z-index: 2;
+}
+
+.thermometer-stem {
+  width: 8px;
+  height: 50px;
+  background: rgba(229, 231, 235, 0.8);
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.thermometer-fill {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.3s ease;
+}
+
+/* Oxygen Saturation */
+.oxygen-visual {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(8, 145, 178, 0.1) 100%);
+  border-radius: 0.75rem;
+}
+
+.oxygen-pulse {
+  animation: pulse 2s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oxygen-icon {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--primary-700);
-  margin-bottom: var(--space-1);
+  color: var(--pulse-color, #06b6d4);
 }
 
-.vital-normal-range {
-  font-size: 0.75rem;
-  color: var(--neutral-500);
-  font-weight: normal;
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: var(--pulse-opacity, 0.7);
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
 }
 
-.vital-sign::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: calc(-1 * var(--space-3));
-  width: 1px;
+/* Pain Score */
+.pain-visual {
+  width: 100%;
   height: 100%;
-  background-color: var(--neutral-200);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(156, 163, 175, 0.1) 0%, rgba(107, 114, 128, 0.1) 100%);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
 }
 
-.vital-sign:last-child::after {
-  display: none;
+.pain-face {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  animation: bounce 2s ease-in-out infinite;
 }
 
-.vital-trend-indicator {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-1);
-  font-size: 0.75rem;
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 
-.vital-trend-indicator.up {
-  color: var(--error-500);
+.pain-scale {
+  width: 100%;
+  height: 6px;
+  background: rgba(229, 231, 235, 0.8);
+  border-radius: 3px;
+  overflow: hidden;
 }
 
-.vital-trend-indicator.down {
-  color: var(--success-500);
+.pain-scale-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: all 0.3s ease;
 }
 
-.vitals-timestamp {
-  font-size: 0.75rem;
-  color: var(--neutral-500);
-  text-align: right;
-  margin-top: var(--space-2);
-  font-style: italic;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .vital-signs {
-    padding: var(--space-3);
-    gap: var(--space-3);
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .vital-signs-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
   }
 
-  .vital-sign {
-    min-width: 80px;
+  .vital-signs-dashboard {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .vital-signs-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .vital-signs-dashboard {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .vital-sign-card {
+    padding: 1rem;
+  }
+
+  .vital-value {
+    font-size: 1.5rem;
+  }
+
+  .vital-signs-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .vital-signs-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .vital-sign-card {
+    padding: 0.75rem;
   }
 
   .vital-value {
     font-size: 1.25rem;
   }
-}
 
-@media (max-width: 480px) {
-  .vital-signs {
-    justify-content: space-between;
-    padding: var(--space-2);
-    gap: var(--space-2);
+  .vital-sign-header h4 {
+    font-size: 0.75rem;
   }
 
-  .vital-sign {
-    min-width: 70px;
-    margin-bottom: var(--space-2);
+  .vital-visualization {
+    height: 60px;
   }
 }

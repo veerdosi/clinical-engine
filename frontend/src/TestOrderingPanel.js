@@ -277,6 +277,7 @@ const TestOrderingPanel = ({ isDisabled, forceTabType = null }) => {
           onClick={handleOrderTest}
           disabled={isDisabled || isOrdering || (!selectedTest || (selectedTest === 'custom' && !customTest))}
         >
+          {isOrdering && <span className="loading-spinner"></span>}
           {isOrdering ? 'Ordering...' : labels.buttonText}
         </button>
       </div>

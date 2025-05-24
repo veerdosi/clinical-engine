@@ -283,7 +283,7 @@
   z-index: 1;
 }
 
-/* New Patient Grid Layout - 12 column grid system */
+/* New Patient Grid Layout - 12 column grid system - Full Width */
 .patient-grid-layout {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
@@ -291,8 +291,7 @@
   height: calc(100vh - 280px); /* Adjusted to account for vital signs */
   max-height: 900px;
   padding: var(--space-6);
-  margin: 0 auto;
-  max-width: 1600px;
+  margin: 0;
   width: 100%;
   padding-top: var(--space-2);
 }
@@ -365,10 +364,9 @@
 }
 
 .tab-container {
-  max-width: 1200px;
-  margin: var(--space-6) auto;
-  padding: var(--space-8);
   width: 100%;
+  margin: var(--space-6) 0;
+  padding: var(--space-8);
   text-align: left;
   background: white;
   border-radius: var(--radius-lg);
@@ -885,10 +883,9 @@ select:focus {
   outline: none !important;
 }
 
-/* Vital signs container styling */
+/* Vital signs container styling - Full Width */
 .vital-signs-container {
-  margin: var(--space-4) auto;
-  max-width: 1500px;
+  margin: var(--space-4) 0;
   width: 100%;
   padding: 0 var(--space-6);
 }

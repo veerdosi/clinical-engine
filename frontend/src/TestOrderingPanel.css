@@ -1,75 +1,107 @@
+/* TestOrderingPanel - Modern Design matching StudentDashboard */
 .test-ordering-panel {
-  background-color: #f7f9fc;
-  border: 1px solid #dbe1ef;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin: 1rem 0;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  max-height: 600px;
-  overflow-y: auto;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  max-height: none;
+  overflow: visible;
 }
 
 .imaging-result-image {
-  margin-top: 1rem;
-  padding: 1rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  background-color: #f9f9f9;
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.imaging-result-image:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .imaging-result-image h4 {
-  margin-top: 0;
-  margin-bottom: 0.75rem;
-  font-size: 1rem;
-  color: #333;
+  margin: 0 0 1rem 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1f2937;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .markdown-results {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 16px;
-  margin-top: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.markdown-results:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .markdown-results h1 {
   font-size: 1.5rem;
-  margin-top: 0;
-  color: #333;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+  color: #1f2937;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .markdown-results h2 {
   font-size: 1.25rem;
-  color: #444;
-  margin-top: 16px;
-  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  margin: 1.5rem 0 0.75rem 0;
 }
 
 .markdown-results h3 {
-  font-size: 1.1rem;
-  color: #555;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin: 1rem 0 0.5rem 0;
 }
 
 .table-row {
   display: flex;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+  transition: background-color 0.2s ease;
+}
+
+.table-row:hover {
+  background-color: rgba(248, 250, 252, 0.5);
 }
 
 .table-row:first-of-type {
-  font-weight: bold;
-  background-color: #f5f5f5;
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.1) 100%);
+  border-radius: 0.5rem 0.5rem 0 0;
 }
 
 .table-cell {
-  padding: 8px;
+  padding: 0.75rem;
   flex: 1;
   min-width: 0;
+  color: #374151;
 }
 
 .markdown-results strong {
-  font-weight: bold;
-  color: #d32f2f;
+  font-weight: 700;
+  color: #dc2626;
 }
 
 .test-ordering-panel.full-width {
@@ -81,54 +113,56 @@
 }
 
 .panel-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   text-align: center;
 }
 
 .panel-header h3 {
-  color: #2c3e50;
+  color: #1f2937;
   margin-bottom: 0.5rem;
-  font-size: 1.3rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .tabs {
   display: flex;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid #dbe1ef;
+  margin-bottom: 2rem;
+  background: rgba(248, 250, 252, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(226, 232, 240, 0.6);
 }
 
 .tab-btn {
-  background-color: transparent;
+  background: transparent;
   border: none;
-  padding: 0.8rem 1.2rem;
+  padding: 0.75rem 1.5rem;
   font-weight: 600;
-  color: #7f8c8d;
+  color: #64748b;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
   position: relative;
-}
-
-.tab-btn:after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background-color: transparent;
-  transition: background-color 0.2s;
-}
-
-.tab-btn.active {
-  color: #3498db;
-}
-
-.tab-btn.active:after {
-  background-color: #3498db;
+  border-radius: 0.75rem;
+  flex: 1;
+  text-align: center;
 }
 
 .tab-btn:hover:not(:disabled) {
-  color: #3498db;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  transform: scale(1.02);
+}
+
+.tab-btn.active {
+  color: #1d4ed8;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
 }
 
 .tab-btn:disabled {
@@ -139,176 +173,223 @@
 .test-selection {
   display: flex;
   flex-direction: column;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .test-selection label {
   font-weight: 600;
-  font-size: 0.9rem;
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
+/* Modern Select Dropdown */
 .test-selection select {
-  padding: 0.8rem;
-  border: 1px solid #dbe1ef;
-  border-radius: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 1rem 3rem 1rem 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 0.75rem;
   font-size: 1rem;
+  font-weight: 500;
   margin-bottom: 1rem;
-  background-color: white;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  color: #374151;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  /* Custom dropdown arrow */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+}
+
+.test-selection select:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
 }
 
 .test-selection select:focus {
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
 }
 
 .test-selection select:disabled {
-  background-color: #f1f1f1;
+  background: rgba(243, 244, 246, 0.8);
+  color: #9ca3af;
   cursor: not-allowed;
+  transform: none;
 }
 
+/* Custom Input Fields */
 .custom-test-input {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .custom-test-input input {
   width: 100%;
-  padding: 0.8rem;
-  border: 1px solid #dbe1ef;
-  border-radius: 4px;
+  padding: 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 0.75rem;
   font-size: 1rem;
-  background-color: white;
+  font-weight: 500;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  backdrop-filter: blur(10px);
+  color: #374151;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.custom-test-input input:hover {
+  border-color: rgba(59, 130, 246, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
 }
 
 .custom-test-input input:focus {
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
 }
 
 .custom-test-input input:disabled {
-  background-color: #f1f1f1;
+  background: rgba(243, 244, 246, 0.8);
+  color: #9ca3af;
   cursor: not-allowed;
+  transform: none;
 }
 
 .custom-test-note {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background-color: #ebf8ff;
-  border: 1px solid #bee3f8;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.05) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 0.75rem;
+  color: #1d4ed8;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-.custom-test-note p {
-  margin: 0;
-  color: #2b6cb0;
+.custom-test-note strong {
+  font-weight: 700;
+  color: #1e40af;
 }
 
+/* Modern Action Buttons */
 .order-btn {
-  padding: 0.8rem 1.5rem;
-  background-color: #3498db;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
   border: none;
-  border-radius: 4px;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  position: relative;
+  overflow: hidden;
 }
 
-.order-btn:hover:not(:disabled) {
-  background-color: #2980b9;
+.order-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.order-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+.order-btn:hover::before {
+  left: 100%;
 }
 
 .order-btn:disabled {
-  background-color: #bdc3c7;
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
   cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.order-btn:disabled::before {
+  display: none;
+}
+
+/* Loading States */
+.loading-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error States */
 .error-message {
-  background-color: #fdf2f2;
-  border: 1px solid #fad7d7;
-  border-radius: 6px;
-  padding: 0.8rem;
-  margin-bottom: 1.5rem;
-}
-
-.error-message p {
-  color: #e53e3e;
-  margin: 0;
-  font-size: 0.9rem;
-}
-
-.test-results {
-  background-color: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-}
-
-.test-results h4 {
-  color: #2d3748;
-  margin-top: 0;
-  margin-bottom: 1rem;
-  font-size: 1.1rem;
-  border-bottom: 1px solid #edf2f7;
-  padding-bottom: 0.5rem;
-}
-
-.result-content {
-  max-height: 400px;
-  overflow-y: auto;
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-
-.result-content h1,
-.result-content h2 {
-  font-size: 1.2rem;
-  margin-top: 1.2rem;
-  margin-bottom: 0.8rem;
-}
-
-.result-content h3,
-.result-content h4 {
-  font-size: 1rem;
   margin-top: 1rem;
-  margin-bottom: 0.6rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 0.75rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-.result-content table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 1rem 0;
+.success-message {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 0.75rem;
+  color: #059669;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-.result-content th,
-.result-content td {
-  border: 1px solid #e2e8f0;
-  padding: 0.5rem;
-  text-align: left;
-}
-
-.result-content th {
-  background-color: #f7fafc;
-  font-weight: 600;
-}
-
-.result-content strong {
-  color: #e53e3e;
-}
-
-/* For responsive design */
-@media (max-width: 600px) {
-  .test-ordering-panel {
-    padding: 1rem;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .tabs {
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .tab-btn {
-    padding: 0.6rem 0.8rem;
-    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .test-selection select,
+  .custom-test-input input {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .order-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
   }
 }

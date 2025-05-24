@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './VitalSigns.css';
 
-const VitalSigns = () => {
+const VitalSigns = ({ vitals: propsVitals }) => {
   // State to hold fetched vital signs data
   const [vitals, setVitals] = useState(null);
 
@@ -18,15 +18,31 @@ const VitalSigns = () => {
           throw new Error('Failed to fetch vital signs');
         }
         const data = await response.json();
-        setVitals(data.findings);
+
+        // If backend returns structured vital signs, use them; otherwise generate random ones
+        if (data.findings && typeof data.findings === 'object' && !Array.isArray(data.findings)) {
+          setVitals(data.findings);
+        } else {
+          // Don't generate random values, use null to show we need real data
+          console.log('No structured vital signs from backend, data:', data);
+          setVitals(null);
+        }
       } catch (err) {
         console.error('Error fetching vital signs:', err);
+        // On error, don't generate random values
+        setVitals(null);
       }
     };
-    fetchVitalSigns();
-  }, []);
 
-  // Default vital sign values
+    // Use props vitals if provided, otherwise fetch from API
+    if (propsVitals && typeof propsVitals === 'object') {
+      setVitals(propsVitals);
+    } else {
+      fetchVitalSigns();
+    }
+  }, [propsVitals]);
+
+  // Default vital sign values (only used if no real data available)
   const defaultVitals = {
     HR: "72 bpm",
     BP: "120/80 mmHg",
@@ -36,7 +52,30 @@ const VitalSigns = () => {
     Pain: "0/10"
   };
 
-  const allVitals = { ...defaultVitals, ...vitals };
+  // Use actual vitals if available, otherwise use defaults
+  const currentVitals = vitals || defaultVitals;
+
+  // Format vital signs for display - handle both structured data and string formats
+  const formatVitalSigns = (vitals) => {
+    // Handle different vital signs formats from backend/Perplexity
+    const hr = vitals.HR || vitals.heart_rate || vitals.hr || vitals['Heart Rate'] || defaultVitals.HR;
+    const bp = vitals.BP || vitals.blood_pressure || vitals.bp || vitals['Blood Pressure'] || defaultVitals.BP;
+    const rr = vitals.RR || vitals.respiratory_rate || vitals.rr || vitals['Respiratory Rate'] || defaultVitals.RR;
+    const temp = vitals.Temp || vitals.Temperature || vitals.temperature || vitals.temp || vitals['Temperature'] || defaultVitals.Temp;
+    const spo2 = vitals.SpO2 || vitals.oxygen_saturation || vitals.spo2 || vitals['Oxygen Saturation'] || vitals['SpO2'] || defaultVitals.SpO2;
+    const pain = vitals.Pain || vitals.pain_score || vitals.pain || vitals['Pain Score'] || vitals['Pain'] || defaultVitals.Pain;
+
+    return {
+      HR: typeof hr === 'string' ? hr : `${hr} bpm`,
+      BP: typeof bp === 'string' ? bp : `${bp} mmHg`,
+      RR: typeof rr === 'string' ? rr : `${rr} breaths/min`,
+      Temp: typeof temp === 'string' ? temp : `${temp} °C`,
+      SpO2: typeof spo2 === 'string' ? spo2 : `${spo2}%`,
+      Pain: typeof pain === 'string' ? pain : `${pain}/10`
+    };
+  };
+
+  const allVitals = formatVitalSigns(currentVitals);
 
   return (
     <div className="vital-signs-dashboard">
