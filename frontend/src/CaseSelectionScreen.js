@@ -67,9 +67,16 @@ const CaseSelectionScreen = () => {
       }
 
       const caseData = await response.json();
+      console.log("Generated case data:", caseData);
 
       // Navigate to the case view after successful case generation
-      navigate('/case/patient');
+      // Use the case ID from the response if available
+      if (caseData && caseData.id) {
+        navigate(`/case/${caseData.id}/patient`);
+      } else {
+        // Fallback to current case
+        navigate('/case/patient');
+      }
 
     } catch (err) {
       console.error('Error generating case:', err);

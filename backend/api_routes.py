@@ -34,9 +34,9 @@ class APIRoutes:
         Args:
             blueprint: Flask Blueprint to register routes on
         """
-        
+
         # ==================== AUTHENTICATION ROUTES ====================
-        
+
         @blueprint.route('/auth/google', methods=['POST'])
         def google_auth():
             try:
@@ -101,7 +101,7 @@ class APIRoutes:
                 return jsonify({"valid": False, "error": str(e)}), 500
 
         # ==================== DASHBOARD ROUTES ====================
-        
+
         @blueprint.route('/dashboard', methods=['GET'])
         @login_required
         def get_dashboard_data():
@@ -151,7 +151,7 @@ class APIRoutes:
                     case_info = eval_data.get('case_info', {})
                     timeline = eval_data.get('session_data', {}).get('timeline', [])
                     time_taken = None
-                    
+
                     # Calculate time taken from timeline
                     if timeline:
                         start_time = None
@@ -161,7 +161,7 @@ class APIRoutes:
                                 start_time = event.get('timestamp')
                             elif event.get('action') == 'diagnosis_submitted':
                                 end_time = event.get('timestamp')
-                        
+
                         if start_time and end_time:
                             try:
                                 start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
@@ -170,10 +170,10 @@ class APIRoutes:
                                 time_taken = f"{int(time_taken_seconds // 60)} min"
                             except:
                                 time_taken = "Unknown"
-                    
+
                     is_correct = eval_data.get('evaluation_result', {}).get('diagnosis_correct', False)
                     score = eval_data.get('evaluation_result', {}).get('overall_clinical_score', 0)
-                    
+
                     recent_cases.append({
                         'id': str(eval_data['_id']),
                         'name': case_info.get('name', 'Unknown Patient'),
@@ -218,10 +218,10 @@ class APIRoutes:
                 for eval_data in evaluations:
                     specialty = eval_data.get('case_info', {}).get('specialty', 'Unknown')
                     is_correct = eval_data.get('evaluation_result', {}).get('diagnosis_correct', False)
-                    
+
                     if specialty not in specialty_stats:
                         specialty_stats[specialty] = {'total': 0, 'correct': 0}
-                    
+
                     specialty_stats[specialty]['total'] += 1
                     if is_correct:
                         specialty_stats[specialty]['correct'] += 1
@@ -244,7 +244,7 @@ class APIRoutes:
                     eval_copy['case_data'] = eval_data.get('case_info', {})
                     eval_copy['is_correct'] = eval_data.get('evaluation_result', {}).get('diagnosis_correct', False)
                     eval_copy['submission'] = {'diagnosis': eval_data.get('student_diagnosis', 'Unknown')}
-                    
+
                     # Calculate time_taken from timeline if available
                     timeline = eval_data.get('session_data', {}).get('timeline', [])
                     time_taken_seconds = None
@@ -256,7 +256,7 @@ class APIRoutes:
                                 start_time = event.get('timestamp')
                             elif event.get('action') == 'diagnosis_submitted':
                                 end_time = event.get('timestamp')
-                        
+
                         if start_time and end_time:
                             try:
                                 start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
@@ -264,7 +264,7 @@ class APIRoutes:
                                 time_taken_seconds = (end_dt - start_dt).total_seconds()
                             except:
                                 pass
-                    
+
                     eval_copy['time_taken'] = time_taken_seconds
                     formatted_evaluations.append(eval_copy)
 
@@ -293,7 +293,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== EVALUATION ROUTES ====================
-        
+
         @blueprint.route('/evaluations/history', methods=['GET'])
         @login_required
         def get_evaluation_history():
@@ -333,16 +333,16 @@ class APIRoutes:
                     eval_copy = eval_data.copy()
                     eval_copy['_id'] = str(eval_data['_id'])
                     eval_copy['id'] = str(eval_data['_id'])  # Add id field for frontend compatibility
-                    
+
                     # Map case_info to case_data for frontend compatibility
                     eval_copy['case_data'] = eval_data.get('case_info', {})
-                    
+
                     # Add is_correct field for frontend compatibility
                     eval_copy['is_correct'] = eval_data.get('evaluation_result', {}).get('diagnosis_correct', False)
-                    
+
                     # Add submission field for frontend compatibility
                     eval_copy['submission'] = {'diagnosis': eval_data.get('student_diagnosis', 'Unknown')}
-                    
+
                     # Calculate time_taken from session timeline if available
                     timeline = eval_data.get('session_data', {}).get('timeline', [])
                     time_taken_seconds = None
@@ -354,7 +354,7 @@ class APIRoutes:
                                 start_time = event.get('timestamp')
                             elif event.get('action') == 'diagnosis_submitted':
                                 end_time = event.get('timestamp')
-                        
+
                         if start_time and end_time:
                             try:
                                 start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
@@ -362,7 +362,7 @@ class APIRoutes:
                                 time_taken_seconds = (end_dt - start_dt).total_seconds()
                             except Exception as e:
                                 logger.warning(f"Error calculating time taken: {str(e)}")
-                    
+
                     eval_copy['time_taken'] = time_taken_seconds
                     formatted_evaluations.append(eval_copy)
 
@@ -409,7 +409,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== SESSION ROUTES ====================
-        
+
         @blueprint.route('/sessions/history', methods=['GET'])
         @login_required
         def get_session_history():
@@ -448,7 +448,7 @@ class APIRoutes:
                     # Convert ObjectId to string for JSON serialization
                     session['_id'] = str(session['_id'])
                     session['id'] = str(session['_id'])  # Add id field for frontend compatibility
-                    
+
                     # Calculate duration if possible
                     if 'session_start_time' in session and 'diagnosis_submission_time' in session and session['diagnosis_submission_time']:
                         duration = (session['diagnosis_submission_time'] - session['session_start_time']).total_seconds()
@@ -494,7 +494,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== CASE MANAGEMENT ROUTES ====================
-        
+
         @blueprint.route('/health', methods=['GET'])
         def health_check():
             return jsonify({"status": "healthy"})
@@ -561,6 +561,32 @@ class APIRoutes:
 
                 logger.info(f"Attempting to resume case {case_id} for user {user.user_id}")
 
+                # Validate case_id - reject common invalid values
+                if case_id in ['patient', 'labs', 'imaging', 'procedures']:
+                    logger.warning(f"Invalid case_id '{case_id}' - appears to be a route path")
+                    return jsonify({"error": "Invalid case ID"}), 400
+
+                # Check if case_id looks like a MongoDB ObjectId (means frontend sent session _id instead of case_id)
+                if len(case_id) == 24 and all(c in '0123456789abcdef' for c in case_id.lower()):
+                    logger.info(f"Case ID {case_id} appears to be a MongoDB ObjectId, looking up by session _id")
+                    from bson.objectid import ObjectId
+                    try:
+                        session = mongo.db.sessions.find_one({
+                            "_id": ObjectId(case_id),
+                            "user_id": user.user_id,
+                            "status": "in_progress"
+                        })
+                        if session:
+                            actual_case_id = session.get('case_id')
+                            logger.info(f"Found session with _id {case_id}, actual case_id is {actual_case_id}")
+                            case_id = actual_case_id
+                        else:
+                            logger.warning(f"No in_progress session found with _id {case_id}")
+                            return jsonify({"error": "Session not found or already completed"}), 404
+                    except Exception as e:
+                        logger.error(f"Error converting {case_id} to ObjectId: {e}")
+                        return jsonify({"error": "Invalid case ID format"}), 400
+
                 # Find the session for this case and user
                 session = mongo.db.sessions.find_one({
                     "user_id": user.user_id,
@@ -574,10 +600,10 @@ class APIRoutes:
                 # Load session data back into session manager
                 self.session_manager.case_id = case_id
                 self.session_manager.user_id = user.user_id
-                
+
                 if 'case_data' in session:
                     self.session_manager.case_data = session['case_data']
-                
+
                 # Restore session state
                 self.session_manager.ordered_tests = set(session.get('ordered_tests', []))
                 self.session_manager.ordered_imaging = set(session.get('ordered_imaging', []))
@@ -592,14 +618,14 @@ class APIRoutes:
 
                 # Get case data from session
                 case_data = session.get('case_data', {})
-                
+
                 # If we have case data in session, return it
                 if case_data:
                     # Record resume activity
                     self.session_manager._record_activity("case_resumed", f"Case {case_id} resumed")
-                    
+
                     logger.info(f"Successfully resumed case {case_id} for user {user.user_id}")
-                    
+
                     return jsonify({
                         "success": True,
                         "message": "Case resumed successfully",
@@ -634,7 +660,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== NOTES ROUTES ====================
-        
+
         @blueprint.route('/save-notes', methods=['POST'])
         def save_notes():
             try:
@@ -683,7 +709,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== DIAGNOSIS ROUTES ====================
-        
+
         @blueprint.route('/submit-diagnosis', methods=['POST'])
         @login_required
         def evaluate_diagnosis():
@@ -776,7 +802,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== LAB TESTING ROUTES ====================
-        
+
         @blueprint.route('/order-lab', methods=['POST'])
         def order_lab_test():
             try:
@@ -844,7 +870,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== IMAGING ROUTES ====================
-        
+
         @blueprint.route('/order-imaging', methods=['POST'])
         def order_imaging():
             try:
@@ -918,7 +944,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== PHYSICAL EXAMINATION ROUTES ====================
-        
+
         @blueprint.route('/physical-exam', methods=['POST'])
         def perform_physical_exam():
             try:
@@ -998,7 +1024,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== EVALUATION ROUTES ====================
-        
+
         @blueprint.route('/evaluate-interactions', methods=['POST'])
         def evaluate_interactions():
             try:
@@ -1023,7 +1049,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== CHAT ROUTES ====================
-        
+
         @blueprint.route('/chat', methods=['POST'])
         def chat():
             try:
@@ -1074,7 +1100,7 @@ class APIRoutes:
                 return jsonify({"error": str(e)}), 500
 
         # ==================== SESSION SUMMARY ROUTES ====================
-        
+
         @blueprint.route('/session-summary', methods=['GET'])
         def session_summary():
             try:

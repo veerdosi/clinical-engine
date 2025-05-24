@@ -225,7 +225,7 @@ const StudentDashboard = ({ user }) => {
         }
 
         // Fallback if combined endpoint didn't provide all data or failed
-        if (!combinedDataUsed || !specialtyPerformance.length) { // Check if specialtyPerformance needs calculation
+        if (!combinedDataUsed) {
             const [evaluationsResponse, sessionsResponse] = await Promise.all([
               getUserEvaluations().catch(e => { console.error("Failed to get evaluations:", e); return null; }),
               getUserSessions().catch(e => { console.error("Failed to get sessions:", e); return null; })
@@ -257,8 +257,7 @@ const StudentDashboard = ({ user }) => {
   }, [
     processFullDashboardData,
     processEvaluationsData,
-    processSessionsData,
-    specialtyPerformance.length
+    processSessionsData
   ]);
 
   useEffect(() => {
@@ -417,7 +416,7 @@ const StudentDashboard = ({ user }) => {
                   </h2>
                   <p className="text-blue-100 text-xl font-medium">Continue your clinical journey or explore new cases.</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                   <button
                     onClick={handleStartNewCase}
                     className="group relative px-8 py-4 bg-white text-blue-700 font-bold rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-3"
@@ -550,8 +549,8 @@ const StudentDashboard = ({ user }) => {
               </div>
 
               {recentCases.length === 0 ? (
-                <div className="p-8 lg:p-12 text-center">
-                  <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                <div className="p-8 lg:p-12 text-center flex flex-col items-center justify-center">
+                  <div className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold rounded-2xl shadow-lg hover:shadow-2xl hover:from-blue-700 hover:to-blue-800 hover:scale-105 transition-all duration-300 mx-auto">
                     <FileText className="w-10 h-10 text-blue-500" />
                   </div>
                   <h3 className="text-lg font-semibold text-slate-900 mb-2">No cases yet</h3>
@@ -641,7 +640,7 @@ const StudentDashboard = ({ user }) => {
           <div className="xl:col-span-1 space-y-8 lg:space-y-12">
             {/* Stats */}
             <div className="grid grid-cols-1 gap-4 lg:gap-6">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white overflow-hidden relative group hover:shadow-xl transition-all duration-300">
+              <div className="rounded-2xl shadow-lg p-6 text-white overflow-hidden relative group hover:shadow-xl transition-all duration-300" style={{background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'}}>
                 <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
@@ -653,13 +652,10 @@ const StudentDashboard = ({ user }) => {
                       <p className="text-3xl font-bold">{stats.totalCases}</p>
                     </div>
                   </div>
-                  <div className="h-1 bg-white/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-white rounded-full w-3/4"></div>
-                  </div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white overflow-hidden relative group hover:shadow-xl transition-all duration-300">
+              <div className="rounded-2xl shadow-lg p-6 text-white overflow-hidden relative group hover:shadow-xl transition-all duration-300" style={{background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'}}>
                 <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300"></div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-3">
