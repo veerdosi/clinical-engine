@@ -19,7 +19,7 @@ class APIRoutes:
     Defines and manages API routes for the application.
     """
     def __init__(self, case_manager, session_manager, chat_handler,
-                lab_system=None, imaging_system=None, physical_exam_system=None):
+                 lab_system=None, imaging_system=None, physical_exam_system=None):
         self.case_manager = case_manager
         self.session_manager = session_manager
         self.chat_handler = chat_handler
@@ -34,8 +34,9 @@ class APIRoutes:
         Args:
             blueprint: Flask Blueprint to register routes on
         """
-        # Add Authentication Routes
-        # Google Sign-In route
+        
+        # ==================== AUTHENTICATION ROUTES ====================
+        
         @blueprint.route('/auth/google', methods=['POST'])
         def google_auth():
             try:
@@ -63,7 +64,6 @@ class APIRoutes:
                 logger.error(f"Error in Google authentication: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Authentication test endpoint
         @blueprint.route('/auth/test', methods=['GET'])
         @login_required
         def test_auth():
@@ -73,19 +73,16 @@ class APIRoutes:
                 "user": g.user.to_dict() if hasattr(g, 'user') else None
             })
 
-        # User profile route (requires authentication)
         @blueprint.route('/user/profile', methods=['GET'])
         @login_required
         def get_user_profile():
             try:
-                # User is already authenticated via @login_required
                 user = g.user
                 return jsonify({"user": user.to_dict()})
             except Exception as e:
                 logger.error(f"Error getting user profile: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Validate token route
         @blueprint.route('/auth/validate', methods=['GET'])
         def validate_token():
             try:
@@ -103,158 +100,8 @@ class APIRoutes:
                 logger.error(f"Error validating token: {str(e)}")
                 return jsonify({"valid": False, "error": str(e)}), 500
 
-        # Evaluation history endpoint
-        @blueprint.route('/evaluations/history', methods=['GET'])
-        @login_required
-        def get_evaluation_history():
-            try:
-                from flask import current_app
-                if not hasattr(current_app, 'mongo') or current_app.mongo is None:
-                    logger.error("MongoDB connection not available")
-                    return jsonify({"error": "Database connection not available"}), 503
-
-                mongo = current_app.mongo
-                user = g.user
-
-                # Get paginated evaluations for the user
-                page = request.args.get('page', 1, type=int)
-                per_page = request.args.get('per_page', 10, type=int)
-
-                # Calculate skip value for pagination
-                skip = (page - 1) * per_page
-
-                # Query MongoDB evaluations collection
-                evaluations = list(mongo.db.evaluations.find(
-                    {"user_id": user.user_id},
-                    {
-                        "case_info": 1,
-                        "student_diagnosis": 1,
-                        "evaluation_result.overall_clinical_score": 1,
-                        "evaluation_result.diagnosis_correct": 1,
-                        "evaluation_result.diagnosis_accuracy_score": 1,
-                        "timestamp": 1
-                    }
-                ).sort("timestamp", -1).skip(skip).limit(per_page))
-
-                # Count total evaluations for pagination
-                total_evaluations = mongo.db.evaluations.count_documents({"user_id": user.user_id})
-
-                # Format the results
-                formatted_evaluations = []
-                for eval in evaluations:
-                    # Convert ObjectId to string for JSON serialization
-                    eval['_id'] = str(eval['_id'])
-                    formatted_evaluations.append(eval)
-
-                return jsonify({
-                    "evaluations": formatted_evaluations,
-                    "pagination": {
-                        "total": total_evaluations,
-                        "page": page,
-                        "per_page": per_page,
-                        "pages": (total_evaluations + per_page - 1) // per_page  # Ceiling division
-                    }
-                })
-            except Exception as e:
-                logger.error(f"Error retrieving evaluation history: {str(e)}")
-                return jsonify({"error": str(e)}), 500
-
-        # Single evaluation details endpoint
-        @blueprint.route('/evaluations/<evaluation_id>', methods=['GET'])
-        @login_required
-        def get_evaluation_details(evaluation_id):
-            try:
-                from flask import current_app
-                from bson.objectid import ObjectId
-
-                if not hasattr(current_app, 'mongo') or current_app.mongo is None:
-                    logger.error("MongoDB connection not available")
-                    return jsonify({"error": "Database connection not available"}), 503
-
-                mongo = current_app.mongo
-                user = g.user
-
-                # Query for the specific evaluation
-                try:
-                    evaluation = mongo.db.evaluations.find_one({
-                        "_id": ObjectId(evaluation_id),
-                        "user_id": user.user_id  # Ensure user can only access their own evaluations
-                    })
-                except Exception as e:
-                    logger.error(f"Invalid evaluation ID format: {str(e)}")
-                    return jsonify({"error": "Invalid evaluation ID"}), 400
-
-                if not evaluation:
-                    return jsonify({"error": "Evaluation not found or access denied"}), 404
-
-                # Convert ObjectId to string for JSON serialization
-                evaluation['_id'] = str(evaluation['_id'])
-
-                return jsonify({"evaluation": evaluation})
-            except Exception as e:
-                logger.error(f"Error retrieving evaluation details: {str(e)}")
-                return jsonify({"error": str(e)}), 500
-
-        # User sessions history endpoint
-        @blueprint.route('/sessions/history', methods=['GET'])
-        @login_required
-        def get_session_history():
-            try:
-                from flask import current_app
-
-                if not hasattr(current_app, 'mongo') or current_app.mongo is None:
-                    logger.error("MongoDB connection not available")
-                    return jsonify({"error": "Database connection not available"}), 503
-
-                mongo = current_app.mongo
-                user = g.user
-
-                # Get paginated sessions for the user
-                page = request.args.get('page', 1, type=int)
-                per_page = request.args.get('per_page', 10, type=int)
-
-                # Calculate skip value for pagination
-                skip = (page - 1) * per_page
-
-                # Query MongoDB sessions collection
-                sessions = list(mongo.db.sessions.find(
-                    {"user_id": user.user_id},
-                    {
-                        "case_id": 1,
-                        "timestamp": 1,
-                        "session_start_time": 1,
-                        "diagnosis_submission_time": 1
-                    }
-                ).sort("timestamp", -1).skip(skip).limit(per_page))
-
-                # Count total sessions for pagination
-                total_sessions = mongo.db.sessions.count_documents({"user_id": user.user_id})
-
-                # Format the results
-                formatted_sessions = []
-                for session in sessions:
-                    # Convert ObjectId to string for JSON serialization
-                    session['_id'] = str(session['_id'])
-                    # Calculate duration if possible
-                    if 'session_start_time' in session and 'diagnosis_submission_time' in session and session['diagnosis_submission_time']:
-                        duration = (session['diagnosis_submission_time'] - session['session_start_time']).total_seconds()
-                        session['duration_seconds'] = duration
-                    formatted_sessions.append(session)
-
-                return jsonify({
-                    "sessions": formatted_sessions,
-                    "pagination": {
-                        "total": total_sessions,
-                        "page": page,
-                        "per_page": per_page,
-                        "pages": (total_sessions + per_page - 1) // per_page  # Ceiling division
-                    }
-                })
-            except Exception as e:
-                logger.error(f"Error retrieving session history: {str(e)}")
-                return jsonify({"error": str(e)}), 500
-
-        # Dashboard data endpoint - combines all user dashboard data
+        # ==================== DASHBOARD ROUTES ====================
+        
         @blueprint.route('/dashboard', methods=['GET'])
         @login_required
         def get_dashboard_data():
@@ -304,7 +151,7 @@ class APIRoutes:
                     case_info = eval_data.get('case_info', {})
                     timeline = eval_data.get('session_data', {}).get('timeline', [])
                     time_taken = None
-
+                    
                     # Calculate time taken from timeline
                     if timeline:
                         start_time = None
@@ -314,7 +161,7 @@ class APIRoutes:
                                 start_time = event.get('timestamp')
                             elif event.get('action') == 'diagnosis_submitted':
                                 end_time = event.get('timestamp')
-
+                        
                         if start_time and end_time:
                             try:
                                 start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
@@ -323,10 +170,10 @@ class APIRoutes:
                                 time_taken = f"{int(time_taken_seconds // 60)} min"
                             except:
                                 time_taken = "Unknown"
-
+                    
                     is_correct = eval_data.get('evaluation_result', {}).get('diagnosis_correct', False)
                     score = eval_data.get('evaluation_result', {}).get('overall_clinical_score', 0)
-
+                    
                     recent_cases.append({
                         'id': str(eval_data['_id']),
                         'name': case_info.get('name', 'Unknown Patient'),
@@ -371,10 +218,10 @@ class APIRoutes:
                 for eval_data in evaluations:
                     specialty = eval_data.get('case_info', {}).get('specialty', 'Unknown')
                     is_correct = eval_data.get('evaluation_result', {}).get('diagnosis_correct', False)
-
+                    
                     if specialty not in specialty_stats:
                         specialty_stats[specialty] = {'total': 0, 'correct': 0}
-
+                    
                     specialty_stats[specialty]['total'] += 1
                     if is_correct:
                         specialty_stats[specialty]['correct'] += 1
@@ -397,7 +244,7 @@ class APIRoutes:
                     eval_copy['case_data'] = eval_data.get('case_info', {})
                     eval_copy['is_correct'] = eval_data.get('evaluation_result', {}).get('diagnosis_correct', False)
                     eval_copy['submission'] = {'diagnosis': eval_data.get('student_diagnosis', 'Unknown')}
-
+                    
                     # Calculate time_taken from timeline if available
                     timeline = eval_data.get('session_data', {}).get('timeline', [])
                     time_taken_seconds = None
@@ -409,7 +256,7 @@ class APIRoutes:
                                 start_time = event.get('timestamp')
                             elif event.get('action') == 'diagnosis_submitted':
                                 end_time = event.get('timestamp')
-
+                        
                         if start_time and end_time:
                             try:
                                 start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
@@ -417,7 +264,7 @@ class APIRoutes:
                                 time_taken_seconds = (end_dt - start_dt).total_seconds()
                             except:
                                 pass
-
+                    
                     eval_copy['time_taken'] = time_taken_seconds
                     formatted_evaluations.append(eval_copy)
 
@@ -445,18 +292,187 @@ class APIRoutes:
                 logger.error(f"Error retrieving dashboard data: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Session-specific evaluations endpoint
+        # ==================== EVALUATION ROUTES ====================
+        
+        @blueprint.route('/evaluations/history', methods=['GET'])
+        @login_required
+        def get_evaluation_history():
+            try:
+                from .db import mongo
+                user = g.user
+
+                # Get paginated evaluations for the user
+                page = request.args.get('page', 1, type=int)
+                per_page = request.args.get('per_page', 10, type=int)
+
+                # Calculate skip value for pagination
+                skip = (page - 1) * per_page
+
+                # Query MongoDB evaluations collection with all needed fields
+                evaluations = list(mongo.db.evaluations.find(
+                    {"user_id": user.user_id},
+                    {
+                        "case_info": 1,
+                        "student_diagnosis": 1,
+                        "evaluation_result.overall_clinical_score": 1,
+                        "evaluation_result.diagnosis_correct": 1,
+                        "evaluation_result.diagnosis_accuracy_score": 1,
+                        "timestamp": 1,
+                        "case_id": 1,
+                        "session_data.timeline": 1
+                    }
+                ).sort("timestamp", -1).skip(skip).limit(per_page))
+
+                # Count total evaluations for pagination
+                total_evaluations = mongo.db.evaluations.count_documents({"user_id": user.user_id})
+
+                # Format the results for frontend compatibility
+                formatted_evaluations = []
+                for eval_data in evaluations:
+                    # Convert ObjectId to string for JSON serialization
+                    eval_copy = eval_data.copy()
+                    eval_copy['_id'] = str(eval_data['_id'])
+                    eval_copy['id'] = str(eval_data['_id'])  # Add id field for frontend compatibility
+                    
+                    # Map case_info to case_data for frontend compatibility
+                    eval_copy['case_data'] = eval_data.get('case_info', {})
+                    
+                    # Add is_correct field for frontend compatibility
+                    eval_copy['is_correct'] = eval_data.get('evaluation_result', {}).get('diagnosis_correct', False)
+                    
+                    # Add submission field for frontend compatibility
+                    eval_copy['submission'] = {'diagnosis': eval_data.get('student_diagnosis', 'Unknown')}
+                    
+                    # Calculate time_taken from session timeline if available
+                    timeline = eval_data.get('session_data', {}).get('timeline', [])
+                    time_taken_seconds = None
+                    if timeline:
+                        start_time = None
+                        end_time = None
+                        for event in timeline:
+                            if event.get('action') == 'session_start':
+                                start_time = event.get('timestamp')
+                            elif event.get('action') == 'diagnosis_submitted':
+                                end_time = event.get('timestamp')
+                        
+                        if start_time and end_time:
+                            try:
+                                start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                                end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
+                                time_taken_seconds = (end_dt - start_dt).total_seconds()
+                            except Exception as e:
+                                logger.warning(f"Error calculating time taken: {str(e)}")
+                    
+                    eval_copy['time_taken'] = time_taken_seconds
+                    formatted_evaluations.append(eval_copy)
+
+                return jsonify({
+                    "evaluations": formatted_evaluations,
+                    "pagination": {
+                        "total": total_evaluations,
+                        "page": page,
+                        "per_page": per_page,
+                        "pages": (total_evaluations + per_page - 1) // per_page  # Ceiling division
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Error retrieving evaluation history: {str(e)}")
+                return jsonify({"error": str(e)}), 500
+
+        @blueprint.route('/evaluations/<evaluation_id>', methods=['GET'])
+        @login_required
+        def get_evaluation_details(evaluation_id):
+            try:
+                from .db import mongo
+                from bson.objectid import ObjectId
+                user = g.user
+
+                # Query for the specific evaluation
+                try:
+                    evaluation = mongo.db.evaluations.find_one({
+                        "_id": ObjectId(evaluation_id),
+                        "user_id": user.user_id  # Ensure user can only access their own evaluations
+                    })
+                except Exception as e:
+                    logger.error(f"Invalid evaluation ID format: {str(e)}")
+                    return jsonify({"error": "Invalid evaluation ID"}), 400
+
+                if not evaluation:
+                    return jsonify({"error": "Evaluation not found or access denied"}), 404
+
+                # Convert ObjectId to string for JSON serialization
+                evaluation['_id'] = str(evaluation['_id'])
+
+                return jsonify({"evaluation": evaluation})
+            except Exception as e:
+                logger.error(f"Error retrieving evaluation details: {str(e)}")
+                return jsonify({"error": str(e)}), 500
+
+        # ==================== SESSION ROUTES ====================
+        
+        @blueprint.route('/sessions/history', methods=['GET'])
+        @login_required
+        def get_session_history():
+            try:
+                from .db import mongo
+                user = g.user
+
+                # Get paginated sessions for the user
+                page = request.args.get('page', 1, type=int)
+                per_page = request.args.get('per_page', 10, type=int)
+
+                # Calculate skip value for pagination
+                skip = (page - 1) * per_page
+
+                # Query MongoDB sessions collection
+                sessions = list(mongo.db.sessions.find(
+                    {"user_id": user.user_id},
+                    {
+                        "case_id": 1,
+                        "timestamp": 1,
+                        "session_start_time": 1,
+                        "diagnosis_submission_time": 1,
+                        "case_data": 1,
+                        "status": 1,
+                        "last_updated_at": 1,
+                        "time_elapsed": 1
+                    }
+                ).sort("timestamp", -1).skip(skip).limit(per_page))
+
+                # Count total sessions for pagination
+                total_sessions = mongo.db.sessions.count_documents({"user_id": user.user_id})
+
+                # Format the results
+                formatted_sessions = []
+                for session in sessions:
+                    # Convert ObjectId to string for JSON serialization
+                    session['_id'] = str(session['_id'])
+                    session['id'] = str(session['_id'])  # Add id field for frontend compatibility
+                    
+                    # Calculate duration if possible
+                    if 'session_start_time' in session and 'diagnosis_submission_time' in session and session['diagnosis_submission_time']:
+                        duration = (session['diagnosis_submission_time'] - session['session_start_time']).total_seconds()
+                        session['duration_seconds'] = duration
+                    formatted_sessions.append(session)
+
+                return jsonify({
+                    "sessions": formatted_sessions,
+                    "pagination": {
+                        "total": total_sessions,
+                        "page": page,
+                        "per_page": per_page,
+                        "pages": (total_sessions + per_page - 1) // per_page  # Ceiling division
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Error retrieving session history: {str(e)}")
+                return jsonify({"error": str(e)}), 500
+
         @blueprint.route('/sessions/<case_id>/evaluations', methods=['GET'])
         @login_required
         def get_session_evaluations(case_id):
             try:
-                from flask import current_app
-
-                if not hasattr(current_app, 'mongo') or current_app.mongo is None:
-                    logger.error("MongoDB connection not available")
-                    return jsonify({"error": "Database connection not available"}), 503
-
-                mongo = current_app.mongo
+                from .db import mongo
                 user = g.user
 
                 # Query MongoDB evaluations collection for evaluations related to this case
@@ -477,12 +493,12 @@ class APIRoutes:
                 logger.error(f"Error retrieving session evaluations: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Health check endpoint
+        # ==================== CASE MANAGEMENT ROUTES ====================
+        
         @blueprint.route('/health', methods=['GET'])
         def health_check():
             return jsonify({"status": "healthy"})
 
-        # Current case endpoint
         @blueprint.route('/current-case', methods=['GET'])
         def get_current_case():
             try:
@@ -495,77 +511,6 @@ class APIRoutes:
                 logger.error(f"Error getting current case: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Resume case endpoint
-        @blueprint.route('/resume-case/<case_id>', methods=['POST'])
-        @login_required
-        def resume_case(case_id):
-            try:
-                from .db import mongo
-                user = g.user
-
-                # Find the session for this case and user
-                session = mongo.db.sessions.find_one({
-                    "user_id": user.user_id,
-                    "case_id": case_id,
-                    "status": "in_progress"
-                })
-
-                if not session:
-                    return jsonify({"error": "No active session found for this case"}), 404
-
-                # Load the session data into session manager
-                self.session_manager.reset_session(case_id, user.user_id)
-
-                # Restore session state
-                if 'ordered_tests' in session:
-                    self.session_manager.ordered_tests = set(session['ordered_tests'])
-                if 'ordered_imaging' in session:
-                    self.session_manager.ordered_imaging = set(session['ordered_imaging'])
-                if 'physical_exams' in session:
-                    self.session_manager.physical_exams = session['physical_exams']
-                if 'patient_interactions' in session:
-                    self.session_manager.patient_interactions = session['patient_interactions']
-                if 'verified_exam_procedures' in session:
-                    self.session_manager.verified_exam_procedures = session['verified_exam_procedures']
-                if 'patient_notes' in session:
-                    self.session_manager.patient_notes = session['patient_notes']
-                if 'case_data' in session:
-                    self.session_manager.set_case_data(session['case_data'])
-
-                # Restore timing data
-                if 'session_start_time' in session:
-                    self.session_manager.session_start_time = session['session_start_time']
-                if 'activity_timeline' in session:
-                    self.session_manager.activity_timeline = session['activity_timeline']
-
-                # Try to regenerate the case in case manager
-                case_data = session.get('case_data', {})
-                if case_data:
-                    # Try to recreate case from stored data
-                    try:
-                        restored_case = self.case_manager.restore_case(case_id, case_data)
-                        if restored_case:
-                            return jsonify(self.case_manager.get_sanitized_case())
-                    except Exception as e:
-                        logger.warning(f"Could not restore case from case manager: {str(e)}")
-
-                # Return basic case info from session if case manager restoration failed
-                return jsonify({
-                    "id": case_id,
-                    "name": case_data.get('name', 'Unknown Patient'),
-                    "age": case_data.get('age', '??'),
-                    "gender": case_data.get('gender', 'Unknown'),
-                    "specialty": case_data.get('specialty', 'General'),
-                    "difficulty": case_data.get('difficulty', 'Unknown'),
-                    "presenting_complaint": case_data.get('presenting_complaint', 'Unknown'),
-                    "resumed": True
-                })
-
-            except Exception as e:
-                logger.error(f"Error resuming case: {str(e)}")
-                return jsonify({"error": str(e)}), 500
-
-        # New case endpoint
         @blueprint.route('/new-case', methods=['POST'])
         @login_required
         def create_new_case():
@@ -607,26 +552,9 @@ class APIRoutes:
                 logger.error(f"Error creating new case: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        @blueprint.route('/session-timeline', methods=['GET'])
-        def get_session_timeline():
-            try:
-                # Get timeline data from session manager
-                timeline = self.session_manager.get_session_timeline()
-                efficiency_metrics = self.session_manager.get_efficiency_metrics()
-
-                # Return the data
-                return jsonify({
-                    "timeline": timeline,
-                    "efficiency_metrics": efficiency_metrics
-                })
-            except Exception as e:
-                logger.error(f"Error getting session timeline: {str(e)}")
-                return jsonify({"error": str(e)}), 500
-
-        # Resume case endpoint
         @blueprint.route('/resume-case/<case_id>', methods=['POST'])
         @login_required
-        def resume_case(case_id):
+        def resume_case_endpoint(case_id):
             try:
                 from .db import mongo
                 user = g.user
@@ -646,10 +574,10 @@ class APIRoutes:
                 # Load session data back into session manager
                 self.session_manager.case_id = case_id
                 self.session_manager.user_id = user.user_id
-
+                
                 if 'case_data' in session:
                     self.session_manager.case_data = session['case_data']
-
+                
                 # Restore session state
                 self.session_manager.ordered_tests = set(session.get('ordered_tests', []))
                 self.session_manager.ordered_imaging = set(session.get('ordered_imaging', []))
@@ -662,17 +590,16 @@ class APIRoutes:
                 self.session_manager.activity_timeline = session.get('activity_timeline', [])
                 self.session_manager.idle_periods = session.get('idle_periods', [])
 
-                # Recreate the case in case manager (this might need to be implemented)
-                # For now, we'll return the case data from the session
+                # Get case data from session
                 case_data = session.get('case_data', {})
-
-                # If we have case data in session, try to reconstruct case
+                
+                # If we have case data in session, return it
                 if case_data:
                     # Record resume activity
                     self.session_manager._record_activity("case_resumed", f"Case {case_id} resumed")
-
+                    
                     logger.info(f"Successfully resumed case {case_id} for user {user.user_id}")
-
+                    
                     return jsonify({
                         "success": True,
                         "message": "Case resumed successfully",
@@ -690,7 +617,24 @@ class APIRoutes:
                 logger.error(f"Error resuming case: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Notes API endpoints
+        @blueprint.route('/session-timeline', methods=['GET'])
+        def get_session_timeline():
+            try:
+                # Get timeline data from session manager
+                timeline = self.session_manager.get_session_timeline()
+                efficiency_metrics = self.session_manager.get_efficiency_metrics()
+
+                # Return the data
+                return jsonify({
+                    "timeline": timeline,
+                    "efficiency_metrics": efficiency_metrics
+                })
+            except Exception as e:
+                logger.error(f"Error getting session timeline: {str(e)}")
+                return jsonify({"error": str(e)}), 500
+
+        # ==================== NOTES ROUTES ====================
+        
         @blueprint.route('/save-notes', methods=['POST'])
         def save_notes():
             try:
@@ -738,6 +682,8 @@ class APIRoutes:
                 logger.error(f"Error evaluating notes: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
+        # ==================== DIAGNOSIS ROUTES ====================
+        
         @blueprint.route('/submit-diagnosis', methods=['POST'])
         @login_required
         def evaluate_diagnosis():
@@ -794,47 +740,43 @@ class APIRoutes:
 
                 # Store evaluation in MongoDB if user is authenticated
                 if hasattr(g, 'user') and g.user:
-                    from flask import current_app
-
-                    if not hasattr(current_app, 'mongo') or current_app.mongo is None:
-                        logger.warning("MongoDB connection not available - evaluation not stored")
-                    else:
-                        mongo = current_app.mongo
-                        current_case = self.case_manager.get_current_case()
-                        evaluation_data = {
-                            "user_id": g.user.user_id,
-                            "case_id": current_case.get("id", "unknown"),
-                            "case_info": {
-                                "name": current_case.get("name", ""),
-                                "age": current_case.get("age", ""),
-                                "gender": current_case.get("gender", ""),
-                                "specialty": current_case.get("specialty", ""),
-                                "difficulty": current_case.get("difficulty", ""),
-                                "diagnosis": current_case.get("diagnosis", ""),
-                                "presenting_complaint": current_case.get("presenting_complaint", "")
-                            },
-                            "student_diagnosis": student_diagnosis,
-                            "evaluation_result": evaluation_result,
-                            "timestamp": datetime.now(),
-                            "session_data": {
-                                "ordered_tests": list(self.session_manager.get_ordered_tests()),
-                                "ordered_imaging": list(self.session_manager.get_ordered_imaging()),
-                                "notes": notes,
-                                "timeline": timeline,
-                                "efficiency_metrics": efficiency_metrics
-                            }
+                    from .db import mongo
+                    current_case = self.case_manager.get_current_case()
+                    evaluation_data = {
+                        "user_id": g.user.user_id,
+                        "case_id": current_case.get("id", "unknown"),
+                        "case_info": {
+                            "name": current_case.get("name", ""),
+                            "age": current_case.get("age", ""),
+                            "gender": current_case.get("gender", ""),
+                            "specialty": current_case.get("specialty", ""),
+                            "difficulty": current_case.get("difficulty", ""),
+                            "diagnosis": current_case.get("diagnosis", ""),
+                            "presenting_complaint": current_case.get("presenting_complaint", "")
+                        },
+                        "student_diagnosis": student_diagnosis,
+                        "evaluation_result": evaluation_result,
+                        "timestamp": datetime.now(),
+                        "session_data": {
+                            "ordered_tests": list(self.session_manager.get_ordered_tests()),
+                            "ordered_imaging": list(self.session_manager.get_ordered_imaging()),
+                            "notes": notes,
+                            "timeline": timeline,
+                            "efficiency_metrics": efficiency_metrics
                         }
+                    }
 
-                        # Save to MongoDB evaluations collection
-                        mongo.db.evaluations.insert_one(evaluation_data)
-                        logger.info(f"Evaluation stored for user {g.user.user_id} and case {current_case.get('id', 'unknown')}")
+                    # Save to MongoDB evaluations collection
+                    mongo.db.evaluations.insert_one(evaluation_data)
+                    logger.info(f"Evaluation stored for user {g.user.user_id} and case {current_case.get('id', 'unknown')}")
 
                 return jsonify(evaluation_result)
             except Exception as e:
                 logger.error(f"Error evaluating diagnosis: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Order lab tests endpoint
+        # ==================== LAB TESTING ROUTES ====================
+        
         @blueprint.route('/order-lab', methods=['POST'])
         def order_lab_test():
             try:
@@ -883,6 +825,26 @@ class APIRoutes:
                 logger.error(f"Error ordering lab test: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
+        @blueprint.route('/lab-history', methods=['GET'])
+        def get_lab_history():
+            try:
+                if not self.lab_system:
+                    return jsonify({"error": "Lab system not available"}), 404
+
+                test_name = request.args.get('test')
+                current_case = self.case_manager.get_current_case()
+
+                if not current_case:
+                    return jsonify({"error": "No active case"}), 404
+
+                history = self.lab_system.get_test_history(current_case.get("id"), test_name)
+                return jsonify({"history": history})
+            except Exception as e:
+                logger.error(f"Error getting lab history: {str(e)}")
+                return jsonify({"error": str(e)}), 500
+
+        # ==================== IMAGING ROUTES ====================
+        
         @blueprint.route('/order-imaging', methods=['POST'])
         def order_imaging():
             try:
@@ -955,7 +917,8 @@ class APIRoutes:
                 logger.error(f"Error ordering imaging: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Physical examination endpoint
+        # ==================== PHYSICAL EXAMINATION ROUTES ====================
+        
         @blueprint.route('/physical-exam', methods=['POST'])
         def perform_physical_exam():
             try:
@@ -1034,26 +997,8 @@ class APIRoutes:
                 logger.error(f"Error verifying physical examination procedure: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Get lab history endpoint
-        @blueprint.route('/lab-history', methods=['GET'])
-        def get_lab_history():
-            try:
-                if not self.lab_system:
-                    return jsonify({"error": "Lab system not available"}), 404
-
-                test_name = request.args.get('test')
-                current_case = self.case_manager.get_current_case()
-
-                if not current_case:
-                    return jsonify({"error": "No active case"}), 404
-
-                history = self.lab_system.get_test_history(current_case.get("id"), test_name)
-                return jsonify({"history": history})
-            except Exception as e:
-                logger.error(f"Error getting lab history: {str(e)}")
-                return jsonify({"error": str(e)}), 500
-
-        # Evaluate interactions separately endpoint
+        # ==================== EVALUATION ROUTES ====================
+        
         @blueprint.route('/evaluate-interactions', methods=['POST'])
         def evaluate_interactions():
             try:
@@ -1077,7 +1022,8 @@ class APIRoutes:
                 logger.error(f"Error evaluating interactions: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Text chat endpoint
+        # ==================== CHAT ROUTES ====================
+        
         @blueprint.route('/chat', methods=['POST'])
         def chat():
             try:
@@ -1095,7 +1041,6 @@ class APIRoutes:
                 logger.error(f"Error in chat endpoint: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Voice chat endpoint
         @blueprint.route('/voice-chat', methods=['POST'])
         def voice_chat():
             try:
@@ -1128,7 +1073,8 @@ class APIRoutes:
                 logger.error(f"Error in voice chat endpoint: {str(e)}")
                 return jsonify({"error": str(e)}), 500
 
-        # Session summary endpoint
+        # ==================== SESSION SUMMARY ROUTES ====================
+        
         @blueprint.route('/session-summary', methods=['GET'])
         def session_summary():
             try:
